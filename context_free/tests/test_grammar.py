@@ -1,0 +1,37 @@
+"""ContextFreeGrammar unit tests."""
+import filecmp
+import unittest
+
+from context_free.grammar import ContextFreeGrammar, OrderedSet
+
+from util import dot_cfg
+
+class TestContextFreeGrammar(unittest.TestCase):
+
+    def test_constructor(self):
+        cfg = ContextFreeGrammar(
+            OrderedSet(["S", "B", "❬B'❭", "A", "❬A'❭"]),
+            OrderedSet(["a", "b", "c", "d"]),
+            {
+                "S":    OrderedSet(["Bd", "&"]),
+                "B":    OrderedSet(["Ab❬B'❭"]),
+                "❬B'❭": OrderedSet(["c❬B'❭", "&"]),
+                "A":    OrderedSet(["a❬A'❭", "❬A'❭"]),
+                "❬A'❭": OrderedSet(["b❬B'❭da❬A'❭", "&"]),
+            },
+            "S")
+
+        # Test post-conditions: type and values
+        self.assertEqual(cfg.rules["S"]   , OrderedSet([("B", "d"), ("&",)]))
+        self.assertEqual(cfg.rules["B"]   , OrderedSet([("A", "b", "❬B'❭")]))
+        self.assertEqual(cfg.rules["❬B'❭"], OrderedSet([("c", "❬B'❭"), ("&",)]))
+        self.assertEqual(cfg.rules["A"]   , OrderedSet([("a", "❬A'❭"), ("❬A'❭",)]))
+        self.assertEqual(cfg.rules["❬A'❭"], OrderedSet([("b", "❬B'❭", "d", "a", "❬A'❭"), ("&",)]))
+
+        dot_cfg.write_grammar(cfg, "test.cfg")
+        test_path = dot_cfg.os.path.join(dot_cfg.CFGS_DIR, "test.cfg")
+        ref_path = dot_cfg.os.path.join(dot_cfg.CFGS_DIR, "test_constructor.cfg")
+
+        self.assertTrue(filecmp.cmp(test_path, ref_path))
+
+        print(cfg)
