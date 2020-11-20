@@ -32,7 +32,7 @@ class ContextFreeGrammar():
         --------------
             1. variables is an OrderedSet with len > 0
             2. terminals is an OrderedSet
-            3. rules is a dict where each variable has productions.
+            3. rules is a dict where each variable has an entry
             4. start is a valid variable
 
         Post-conditions
