@@ -43,3 +43,15 @@ class TestContextFreeGrammar(unittest.TestCase):
 
         print(cfg)
         print(cfg2)
+
+    def test_rlr(self):
+
+        cfg = dot_cfg.read_grammar("test_rlr_1.cfg")
+        print(cfg)
+        cfg.remove_left_recursion()
+        print(cfg)
+
+        cfg = dot_cfg.read_grammar("test_rlr_2.cfg")
+        print(cfg)
+        cfg.remove_left_recursion()
+        print(cfg)
