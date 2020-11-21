@@ -150,3 +150,38 @@ class ContextFreeGrammar():
         filepath = os.path.join(CFGS_DIR, filename)
         with open(filepath, 'w') as f:
             f.write(str(self))
+
+    # def remove_left_recursion(self):
+
+    #     for i in range(len(self.variables)):
+    #         direct = False
+    #         for j in range(i):
+    #             to_remove = set()
+    #             for production in self.rules[self.variables[i]]:
+    #                 print("i:{}   j:{}   prod:{}".format(self.variables[i],self.variables[j],production))
+    #                 if self.variables[j] == production[0]:
+    #                     alpha = production[1:]
+    #                     to_remove.add(production)
+    #                     for beta in self.rules[self.variables[j]]:
+    #                         self.rules[self.variables[i]].add(beta + alpha)
+    #                         if self.variables[i] == beta[0]:
+    #                             direct = True
+    #                     print("alpha:{}".format(alpha))
+
+    #             for rem in to_remove: #cuidar para nao remover todos!!!!!!!!!!1
+    #                 print("rem:: {}".format(rem))
+    #                 self.rules[self.variables[i]].discard(rem)
+    #         if direct:
+    #             new_var = "❬{}´❭".format(self.variables[i])
+    #             self.variables.add(new_var)
+    #             self.rules[new_var] = OrderedSet()
+    #             new_ord_i = OrderedSet()
+    #             for production in self.rules[self.variables[i]]:
+    #                 if production[0] == self.variables[i]:
+    #                     self.rules[new_var].add(production[1:]+(new_var, ))
+    #                 else:
+    #                     new_ord_i.add(production+(new_var, ))
+    #             if len(new_ord_i) == 0:
+    #                 new_ord_i.add((new_var,))
+    #             self.rules[self.variables[i]] = new_ord_i
+    #             self.rules[new_var].add(('&',))

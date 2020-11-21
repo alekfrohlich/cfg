@@ -63,3 +63,15 @@ class TestContextFreeGrammar(unittest.TestCase):
         cfg = ContextFreeGrammar("test_escape_chars.cfg")
         self.assertNotEqual(cfg.rules["S"], OrderedSet([("\n",), ("\t",)]))
         print(cfg)
+
+    # def test_rlr(self):
+
+    #     cfg = dot_cfg.read_grammar("test_rlr_1.cfg")
+    #     print(cfg)
+    #     cfg.remove_left_recursion()
+    #     print(cfg)
+
+    #     cfg = dot_cfg.read_grammar("test_rlr_2.cfg")
+    #     print(cfg)
+    #     cfg.remove_left_recursion()
+    #     print(cfg)
