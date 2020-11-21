@@ -34,4 +34,12 @@ class TestContextFreeGrammar(unittest.TestCase):
 
         self.assertTrue(filecmp.cmp(test_path, ref_path))
 
+        cfg2 = dot_cfg.read_grammar("test.cfg")
+        self.assertEqual(cfg2.rules["S"]   , OrderedSet([("B", "d"), ("&",)]))
+        self.assertEqual(cfg2.rules["B"]   , OrderedSet([("A", "b", "❬B'❭")]))
+        self.assertEqual(cfg2.rules["❬B'❭"], OrderedSet([("c", "❬B'❭"), ("&",)]))
+        self.assertEqual(cfg2.rules["A"]   , OrderedSet([("a", "❬A'❭"), ("❬A'❭",)]))
+        self.assertEqual(cfg2.rules["❬A'❭"], OrderedSet([("b", "❬B'❭", "d", "a", "❬A'❭"), ("&",)]))
+
         print(cfg)
+        print(cfg2)

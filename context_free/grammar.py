@@ -42,10 +42,11 @@ class ContextFreeGrammar():
         """
 
         # Asserting pre-conditions
-        assert type(variables) == OrderedSet and len(variables) > 0
-        assert type(terminals) == OrderedSet
+        assert type(variables) == OrderedSet and len(variables) > 0 \
+            and all([(v.isupper() and len(v) == 1) or (v[0] == '❬' and v[-1] == '❭' and len(v) > 2) for v in variables]) # This will become obsolete
+        assert type(terminals) == OrderedSet and all([type(t) == str for t in terminals])
         assert type(rules) == dict and rules.keys() == variables and all([type(val) == OrderedSet for val in rules.values()])
-        assert (start.isupper() and len(start) == 1) or (start[0] == '❬' and start[-1] == '❭' and len(start) > 2)
+        assert start in variables
 
         self.variables = variables
         self.terminals = terminals
@@ -64,15 +65,11 @@ class ContextFreeGrammar():
                         j += 1
 
                     assert len(raw[i:j+1]) > 3
-
                     tokenized.append(raw[i:j+1])
-
                     i = j + 1
-
                 else: # uppercase-cariable or terminal
                     tokenized.append(c)
                     i += 1
-
             return tuple(tokenized)
 
         for v, v_rules in rules.items():

@@ -1,0 +1,12 @@
+<GrammarRecursion> => <Line>'\n'<GrammarRecursion> | &
+
+<Line> => <Var>'->'<LineFactored>
+<LineFactored> => '&' | <ProdRecursion>
+
+<ProdRecursion> => <SentForm>'|'<ProdRecursion> | &
+<SentForm> => <Terminal><SentFormRecursion> | <Var><SentFormRecursion> | <Terminal> | <Var>
+
+<Var> => <SingleVar> | <BracketVar>
+<SingleVar> => [UperCase]
+<BracketVar> => '<'([LowerCase] | [UpperCase])+'>'
+
