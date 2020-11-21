@@ -8,6 +8,7 @@ terminals should be non-upper case unicode characters, and variables should be e
 
 The restrictions to these are:
     - escape chars
+    - $: bottom of stack
 
 Notes
 -----
@@ -24,6 +25,7 @@ Notes
         3. The default dict implementation already preserver order.
 """
 import os
+from collections import deque
 
 from oset.ordered_set import OrderedSet
 
@@ -31,7 +33,7 @@ from oset.ordered_set import OrderedSet
 CFGS_DIR = os.path.join(os.path.dirname(__file__), '../cfgs')
 
 
-class ContextFreeGrammar():
+class ContextFreeGrammar:
     def __init__(self, filename: str):
         """
 
@@ -66,7 +68,7 @@ class ContextFreeGrammar():
         self.start = None
 
         with open(filepath, 'r') as f:
-            # FIXME: Syntax Analysis
+            # ContextFreeGrammar.validate_cfg_word(f.read())
             lines = f.read().split("\n")
 
             for line in lines:
@@ -137,9 +139,10 @@ class ContextFreeGrammar():
             if var == self.start:
                 continue
             first = True
+            string += "{} -> ".format(var)
             for rule in self.rules[var]:
                 if first:
-                    string += "{} -> {} ".format(var, "".join(rule))
+                    string += "{} ".format("".join(rule))
                     first = False
                 else:
                     string += "| {} ".format("".join(rule))
@@ -151,37 +154,105 @@ class ContextFreeGrammar():
         with open(filepath, 'w') as f:
             f.write(str(self))
 
-    # def remove_left_recursion(self):
+    @staticmethod
+    def validate_cfg_word(word: str) -> bool:
+        if BOOTSTRAPPING:
+            print("BOOOT")
+        else:
+            print("SPECS ALREADY ON")
 
-    #     for i in range(len(self.variables)):
-    #         direct = False
-    #         for j in range(i):
-    #             to_remove = set()
-    #             for production in self.rules[self.variables[i]]:
-    #                 print("i:{}   j:{}   prod:{}".format(self.variables[i],self.variables[j],production))
-    #                 if self.variables[j] == production[0]:
-    #                     alpha = production[1:]
-    #                     to_remove.add(production)
-    #                     for beta in self.rules[self.variables[j]]:
-    #                         self.rules[self.variables[i]].add(beta + alpha)
-    #                         if self.variables[i] == beta[0]:
-    #                             direct = True
-    #                     print("alpha:{}".format(alpha))
+    def remove_left_recursion(self):
+        """
+        Pre-conditions
+        --------------
+            1. self is e-free and cycle-free.
 
-    #             for rem in to_remove: #cuidar para nao remover todos!!!!!!!!!!1
-    #                 print("rem:: {}".format(rem))
-    #                 self.rules[self.variables[i]].discard(rem)
-    #         if direct:
-    #             new_var = "❬{}´❭".format(self.variables[i])
-    #             self.variables.add(new_var)
-    #             self.rules[new_var] = OrderedSet()
-    #             new_ord_i = OrderedSet()
-    #             for production in self.rules[self.variables[i]]:
-    #                 if production[0] == self.variables[i]:
-    #                     self.rules[new_var].add(production[1:]+(new_var, ))
-    #                 else:
-    #                     new_ord_i.add(production+(new_var, ))
-    #             if len(new_ord_i) == 0:
-    #                 new_ord_i.add((new_var,))
-    #             self.rules[self.variables[i]] = new_ord_i
-    #             self.rules[new_var].add(('&',))
+        Notes
+        -----
+            Be aware when Aj has no productions.
+            While removing direct recursion, one may end up with len(prods_i) == 0, since
+            there may be S => Sbeta, where beta has no productions.
+
+        """
+        # Remove indirect
+        for i in range(len(self.variables)):
+            direct = False
+            for j in range(i):
+                to_remove = set()
+                for production in self.rules[self.variables[i]]:
+                    if self.variables[j] == production[0]:
+                        alpha = production[1:]
+                        to_remove.add(production)
+                        for beta in self.rules[self.variables[j]]:
+                            self.rules[self.variables[i]].add(beta + alpha)
+
+                for rem in to_remove:
+                    self.rules[self.variables[i]].discard(rem)
+
+            for production in self.rules[self.variables[i]]:
+                if production[0] == self.variables[i]:
+                    direct = True
+
+            if direct:
+                new_var = "❬{}'❭".format(self.variables[i])
+                self.variables.add(new_var)
+                self.rules[new_var] = OrderedSet()
+                new_prods_i = OrderedSet()
+                for production in self.rules[self.variables[i]]:
+                    if production[0] == self.variables[i]:
+                        self.rules[new_var].add(production[1:]+(new_var, ))
+                    else:
+                        new_prods_i.add(production+(new_var, ))
+                # if len(new_prods_i) == 0:
+                #     new_prods_i.add((new_var,))
+                self.rules[self.variables[i]] = new_prods_i
+                self.rules[new_var].add(('&',))
+
+    def remove_unit(self):
+        """Find smallest fixed-point for the system:
+        (...)
+
+
+
+        """
+        def bfs(s):
+            visited[s] = True
+            q = deque()
+            q.append(s)
+            v = s
+            while len(q) > 0:
+                v = q.pop()
+                for u in edges[v]:
+                    if not visited[u]:
+                        visited[u] = True
+                        q.append(u)
+
+        edges = dict()
+        for var in self.variables:
+            edges[var] = OrderedSet()
+
+        for h in self.variables:
+            if h in self.rules.keys():
+                for b in self.rules[h]:
+                    if len(b) == 1 and b[0] in self.variables:
+                        edges[h].add(b[0])
+        new_rules = dict()
+        for var in self.variables:
+            new_rules[var] = OrderedSet()
+
+        for var in self.variables:
+            visited = dict()
+            for va in self.variables:
+                visited[va] = False
+            bfs(var)
+            for contender in self.variables:
+                if visited[contender]:
+                    for prod in self.rules[contender]:
+                        if len(prod) > 1 or prod[0] not in self.variables:
+                            new_rules[var].add(prod)
+        self.rules = new_rules
+
+
+BOOTSTRAPPING = True
+SPEC_GRAMMAR = ContextFreeGrammar("spec.cfg")
+BOOTSTRAPPING = False
