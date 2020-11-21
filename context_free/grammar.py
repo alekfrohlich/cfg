@@ -1,12 +1,13 @@
 """This module provides a context-free grammar implementation.
 
-Grammars should be of the form seen in the .cfg files. Furthermore,
+Grammars should follow the dotcfg specification found in cfgs/grammar.cfg. Furthermore,
 terminals should be non-upper case unicode characters, and variables should be either:
-    - length 1 and upper case unicode characters, as in "A" and "Æ"; or
+    - upper case unicode characters, as in "A" and "Æ"; or
     - length > 1 unicode strings inside square brackets, as in "❬variable❭".
       Note that "❭" may not be present in 'variable'. The brackets are "\u276c" and "\u276d".
 
-# FIXME: Are there any restrictions to terminals/variables?
+The restrictions to these are:
+    - escape chars
 
 Notes
 -----
@@ -22,59 +23,103 @@ Notes
            on.
         3. The default dict implementation already preserver order.
 """
+import os
+
 from oset.ordered_set import OrderedSet
 
+
+CFGS_DIR = os.path.join(os.path.dirname(__file__), '../cfgs')
+
+
 class ContextFreeGrammar():
-    def __init__(self, variables: OrderedSet, terminals: OrderedSet, rules: dict, start = 'S'):
+    def __init__(self, filename: str):
         """
 
         Pre-conditions
         --------------
-            1. variables is an OrderedSet with len > 0
-            2. terminals is an OrderedSet
-            3. rules is a dict where each variable has an entry
-            4. start is a valid variable
+            1. filename names a .cfg file inside cfgs/
+            2. The file is a valid grammar according to our context-free grammar specification;
+               c.f., grammar.cfg
+            3. The file contains no white spaces inside syntactical forms # FIXME: wouldn't the grammar capture this already?
+            4. Assumes the grammar has no vars without productions
 
         Post-conditions
         ---------------
-            1. rules is properly tokenized using the three categories cited above: terminal,
-               uppercase-variable, and brackets-variable.
+            1. rules is properly tokenized using the three categories: terminal,
+            uppercase-variable, and brackets-variable.
+            2. variables is an OrderedSet with len > 0, where each entry is valid var
+            3. terminals is an OrderedSet, where each entry is a valid term
+            4. rules is a dict where each variable has an OrderedSet entry
+            5. start is in variables
+
+        Notes
+        -----
+            The first grammar that is read, grammar.cfg, is assumed to be valid; to confirm this, you may run the unit tests.
         """
 
-        # Asserting pre-conditions
-        assert type(variables) == OrderedSet and len(variables) > 0 \
-            and all([(v.isupper() and len(v) == 1) or (v[0] == '❬' and v[-1] == '❭' and len(v) > 2) for v in variables]) # This will become obsolete
-        assert type(terminals) == OrderedSet and all([type(t) == str for t in terminals])
-        assert type(rules) == dict and rules.keys() == variables and all([type(val) == OrderedSet for val in rules.values()])
-        assert start in variables
+        filepath = os.path.join(CFGS_DIR, filename)
+        assert filepath[-4:] == '.cfg', "Invalid extension"
 
-        self.variables = variables
-        self.terminals = terminals
-        self.rules = {v: OrderedSet() for v in variables}
-        self.start = start
+        self.variables = OrderedSet()
+        self.terminals = OrderedSet()
+        self.rules = dict()
+        self.start = None
 
-        def tokenize(raw):
-            tokenized = []
-            i = 0
-            while i < len(raw):
-                c = raw[i]
+        with open(filepath, 'r') as f:
+            # FIXME: Syntax Analysis
+            lines = f.read().split("\n")
 
-                if c == '❬': # brackets-variable
-                    j = i + 1
-                    while raw[j] != '❭':
-                        j += 1
+            for line in lines:
+                if line == lines[-1]:
+                    assert len(line) == 0
+                    continue
 
-                    assert len(raw[i:j+1]) > 3
-                    tokenized.append(raw[i:j+1])
-                    i = j + 1
-                else: # uppercase-cariable or terminal
-                    tokenized.append(c)
-                    i += 1
-            return tuple(tokenized)
+                items = line.split()
+                var = items[0]
+                self.rules[var] = OrderedSet()
+                self.variables.add(var)
 
-        for v, v_rules in rules.items():
-            for rule in v_rules:
-                self.rules[v].add(tokenize(rule))
+                # First iteration
+                if self.start is None:
+                    self.start = var
+
+                k = 2
+                while k < len(items):
+                    raw = items[k]
+
+                    # NOTE: is not a method since the pre-conds are not worth testing
+                    # Tokenize rule
+                    tokenized = []
+                    i = 0
+                    while i < len(raw):
+                        c = raw[i]
+
+                        if c == '❬': # brackets-variable
+                            j = i + 1
+                            while raw[j] != '❭':
+                                j += 1
+
+                            assert len(raw[i:j+1]) > 3
+                            tokenized.append(raw[i:j+1])
+                            # self.variables.add(raw[i:j+1])
+                            i = j + 1
+                        else: # uppercase-cariable or terminal
+                            tokenized.append(c)
+                            if c.isupper():
+                                pass
+                                # self.variables.add(c)
+                            else:
+                                self.terminals.add(c)
+                            i += 1
+                    self.rules[var].add(tuple(tokenized))
+                    k += 2
+
+        # Assert post-conditions: 2-5; see test_constructor for 1.
+        assert type(self.variables) == OrderedSet and len(self.variables) > 0 \
+            and all([(v.isupper() and len(v) == 1) or (v[0] == '❬' and v[-1] == '❭' and len(v) > 2) for v in self.variables])
+        assert type(self.terminals) == OrderedSet and all([type(t) == str and not (t.isupper()) for t in self.terminals])
+        assert type(self.rules) == dict and self.rules.keys() == self.variables and all([type(val) == OrderedSet for val in self.rules.values()])
+        assert self.start in self.variables
 
     def __str__(self) -> str:
         string = ""
@@ -100,3 +145,8 @@ class ContextFreeGrammar():
                     string += "| {} ".format("".join(rule))
             string = string[:-1] + "\n"
         return string
+
+    def save_to_file(self, filename: str):
+        filepath = os.path.join(CFGS_DIR, filename)
+        with open(filepath, 'w') as f:
+            f.write(str(self))
