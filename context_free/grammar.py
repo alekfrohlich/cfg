@@ -252,6 +252,58 @@ class ContextFreeGrammar:
                             new_rules[var].add(prod)
         self.rules = new_rules
 
+    def remove_epsilon(self):
+        def power_set(i, cuts):
+            if i == len(cuts[0]):
+                new_ps = OrderedSet()
+                for c in cuts:
+                    new_c = tuple()
+                    for c2 in c:
+                        if c2 != "$":
+                            new_c += (c2,)
+                    new_ps.add(new_c)
+                return new_ps
+            if cuts[0] in nullables:
+                to_add = OrderedSet()
+                for s in cuts:
+                    # print(type())
+                    # print(s)
+                    # print("->{}".format(s[:i]))
+                    # print("==>".format(s[i+1:]))
+                    s2 = list(s)
+                    s2[i] = '$'
+                    to_add.add(tuple(s2))
+                    # to_add.add(s[:i] + ("$",) + s[i+1:])
+                cuts.update(to_add)
+            return power_set(i+1, cuts)
+
+        nullables = OrderedSet()
+        nullables.add("&")
+
+        changed = True
+        while changed:
+            changed = False
+            for var, prods in self.rules.items():
+                for prod in prods:
+                    if all([p in nullables for p in prod]) and var not in nullables:
+                        nullables.add(var)
+                        changed = True
+
+        for var in self.variables:
+            to_add = OrderedSet()
+            for prods in self.rules[var]:
+                for prod in prods:
+                    to_add.update(power_set(0, OrderedSet([prod])))
+            self.rules[var].update(to_add)
+
+        if self.start in nullables:
+            self.variables.add("❬'{}❭".format(self.start))
+            self.rules["❬'{}❭".format(self.start)] = OrderedSet([(self.start, "&")])
+            self.start = "❬'{}❭".format(self.start)
+
+    def left_factor(self):
+        pass
+
 
 BOOTSTRAPPING = True
 SPEC_GRAMMAR = ContextFreeGrammar("spec.cfg")
