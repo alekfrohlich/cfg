@@ -261,21 +261,29 @@ class ContextFreeGrammar:
                     for c2 in c:
                         if c2 != "$":
                             new_c += (c2,)
-                    new_ps.add(new_c)
+                    if len(new_c) > 0:
+                        new_ps.add(new_c)
                 return new_ps
-            if cuts[0] in nullables:
+
+            if cuts[0][i] in nullables:
                 to_add = OrderedSet()
                 for s in cuts:
-                    # print(type())
-                    # print(s)
-                    # print("->{}".format(s[:i]))
-                    # print("==>".format(s[i+1:]))
-                    s2 = list(s)
-                    s2[i] = '$'
-                    to_add.add(tuple(s2))
-                    # to_add.add(s[:i] + ("$",) + s[i+1:])
+                    to_add.add(s[:i] + ("$",) + s[i+1:]) #FIXME: does it work for i <= 2?
                 cuts.update(to_add)
             return power_set(i+1, cuts)
+
+        def pre_power_set(i, cuts):
+            # if len(cuts[0]) == 1:
+            #     print("oi")
+            #     if cuts[0] != ("&", ):
+            #         return cuts[0]
+            # if len(cuts[0]) == 2:
+            #     to_add = OrderedSet(cuts[0])
+            #     if cuts[0][0] in nullables:
+            #         to_add.add(cuts[0][1:])
+            #     if cuts[0][1] in nullables:
+            #         to_add.add(cuts[0][:1])
+            return power_set(i, cuts)
 
         nullables = OrderedSet()
         nullables.add("&")
@@ -291,14 +299,15 @@ class ContextFreeGrammar:
 
         for var in self.variables:
             to_add = OrderedSet()
-            for prods in self.rules[var]:
-                for prod in prods:
-                    to_add.update(power_set(0, OrderedSet([prod])))
+            for prod in self.rules[var]:
+                to_add.update(pre_power_set(0, OrderedSet([prod])))
             self.rules[var].update(to_add)
+            if ("&", ) in self.rules[var]:
+                self.rules[var].discard(("&", ))
 
         if self.start in nullables:
             self.variables.add("❬'{}❭".format(self.start))
-            self.rules["❬'{}❭".format(self.start)] = OrderedSet([(self.start, "&")])
+            self.rules["❬'{}❭".format(self.start)] = OrderedSet([(self.start, ), ("&", )])
             self.start = "❬'{}❭".format(self.start)
 
     def left_factor(self):

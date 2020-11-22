@@ -128,3 +128,10 @@ class TestContextFreeGrammar(unittest.TestCase):
         test_path = os.path.join(CFGS_DIR, "test_re_1T.cfg")
         ref_path = os.path.join(CFGS_DIR, "test_re_1A.cfg")
         self.assertTrue(filecmp.cmp(test_path, ref_path))
+
+        cfg = ContextFreeGrammar("test_re_2.cfg")
+        cfg.remove_epsilon()
+        cfg.save_to_file("test_re_2T.cfg")
+        test_path = os.path.join(CFGS_DIR, "test_re_2T.cfg")
+        ref_path = os.path.join(CFGS_DIR, "test_re_2A.cfg")
+        self.assertTrue(filecmp.cmp(test_path, ref_path))
