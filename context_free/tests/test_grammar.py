@@ -135,3 +135,28 @@ class TestContextFreeGrammar(unittest.TestCase):
         test_path = os.path.join(CFGS_DIR, "test_re_2T.cfg")
         ref_path = os.path.join(CFGS_DIR, "test_re_2A.cfg")
         self.assertTrue(filecmp.cmp(test_path, ref_path))
+
+    def test_rup(self):
+        cfg = ContextFreeGrammar("test_rup_1.cfg")
+        cfg.remove_unproductives()
+        cfg.save_to_file("test_rup_1T.cfg")
+        test_path = os.path.join(CFGS_DIR, "test_rup_1T.cfg")
+        ref_path = os.path.join(CFGS_DIR, "test_rup_1A.cfg")
+        self.assertTrue(filecmp.cmp(test_path, ref_path))
+
+        # FIXME: empty language
+        # cfg = ContextFreeGrammar("test_rup_2.cfg")
+        # cfg.remove_unproductives()
+        # cfg.save_to_file("test_rup_2T.cfg")
+        # test_path = os.path.join(CFGS_DIR, "test_rup_2T.cfg")
+        # ref_path = os.path.join(CFGS_DIR, "test_rup_2A.cfg")
+        # self.assertTrue(filecmp.cmp(test_path, ref_path))
+
+    def test_rur(self):
+        cfg = ContextFreeGrammar("test_rur_1.cfg")
+        cfg.remove_unreachables()
+        cfg.save_to_file("test_rur_1T.cfg")
+        test_path = os.path.join(CFGS_DIR, "test_rur_1T.cfg")
+        ref_path = os.path.join(CFGS_DIR, "test_rur_1A.cfg")
+        self.assertTrue(filecmp.cmp(test_path, ref_path))
+

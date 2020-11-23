@@ -252,6 +252,7 @@ class ContextFreeGrammar:
                             new_rules[var].add(prod)
         self.rules = new_rules
 
+
     def remove_epsilon(self):
         def power_set(i, cuts):
             if i == len(cuts[0]):
@@ -268,7 +269,7 @@ class ContextFreeGrammar:
             if cuts[0][i] in nullables:
                 to_add = OrderedSet()
                 for s in cuts:
-                    to_add.add(s[:i] + ("$",) + s[i+1:]) #FIXME: does it work for i <= 2?
+                    to_add.add(s[:i] + ("$",) + s[i+1:]) #FIXME: does it work for i <= 2? apparently, it does
                 cuts.update(to_add)
             return power_set(i+1, cuts)
 
@@ -309,6 +310,92 @@ class ContextFreeGrammar:
             self.variables.add("❬'{}❭".format(self.start))
             self.rules["❬'{}❭".format(self.start)] = OrderedSet([(self.start, ), ("&", )])
             self.start = "❬'{}❭".format(self.start)
+
+    def remove_unproductives(self):
+        productives = OrderedSet()
+        for t in self.terminals:
+            productives.add(t)
+        productives.add("&")
+        # print(productives)
+
+        changed = True
+        while changed:
+            changed = False
+            for var, prods in self.rules.items():
+                for prod in prods:
+                    if all([p in productives for p in prod]) and var not in productives:
+                        productives.add(var)
+                        changed = True
+
+        # print(productives)
+
+        new_rules = dict()
+        for v in self.variables:
+            new_production = OrderedSet()
+            for production in self.rules[v]:
+                # print("prod:")
+                # print(production)
+                if all([p in productives for p in production]):
+                    new_production.add(production)
+            new_rules[v] = new_production
+
+        # print(new_rules)
+        self.rules = new_rules
+
+        to_remove = OrderedSet()
+        for v in self.variables:
+            if len(self.rules[v]) == 0:
+                to_remove.add(v)
+
+        for rem in to_remove:
+            del self.rules[rem]
+            self.variables.discard(rem)
+
+        if (len(self.rules[self.start]) == 0):
+            print("NAO SEI O QUE FAZER")
+
+    def remove_unreachables(self):
+        def bfs(s):
+            visited[s] = True
+            q = deque()
+            q.append(s)
+            v = s
+            while len(q) > 0:
+                v = q.pop()
+                for u in edges[v]:
+                    if not visited[u]:
+                        visited[u] = True
+                        q.append(u)
+
+        edges = dict()
+        for var in self.variables:
+            edges[var] = OrderedSet()
+
+        for h in self.variables:
+            if h in self.rules.keys():
+                for b in self.rules[h]:
+                    for symbol in b:
+                        if symbol in self.variables:
+                            edges[h].add(symbol)
+        new_rules = dict()
+        for var in self.variables:
+            new_rules[var] = OrderedSet()
+
+        visited = dict()
+        for va in self.variables:
+                visited[va] = False
+        bfs(self.start)
+
+
+        to_remove = OrderedSet()
+        for v in self.variables:
+            if not visited[v]:
+                to_remove.add(v)
+
+        for rem in to_remove:
+            del self.rules[rem]
+            self.variables.discard(rem)
+
 
     def left_factor(self):
         pass
