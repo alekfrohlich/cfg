@@ -184,3 +184,11 @@ class TestContextFreeGrammar(unittest.TestCase):
         test_path = os.path.join(CFGS_DIR, "test_rs_2T.cfg")
         ref_path = os.path.join(CFGS_DIR, "test_rs_2A.cfg")
         self.assertTrue(filecmp.cmp(test_path, ref_path))
+
+    def test_fnc(self):
+        cfg = ContextFreeGrammar("test_fnc_1.cfg")
+        cfg.fnc()
+        cfg.save_to_file("test_fnc_1T.cfg")
+        test_path = os.path.join(CFGS_DIR, "test_fnc_1T.cfg")
+        ref_path = os.path.join(CFGS_DIR, "test_fnc_1A.cfg")
+        self.assertTrue(filecmp.cmp(test_path, ref_path))

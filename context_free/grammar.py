@@ -448,6 +448,7 @@ class ContextFreeGrammar:
         # print(self.variables)
 
     def reduce_size(self):
+        # reduce_size does not check if new_v was already in the grammar
 
         new_rules = dict()
         to_add_var = OrderedSet()
@@ -490,12 +491,19 @@ class ContextFreeGrammar:
 
 
     def fnc(self):
+        # print(self)
         self.remove_epsilon()
+        # print(self)
         self.remove_unit()
+        # print(self)
         self.remove_unproductives()
+        # print(self)
         self.remove_unreachables()
+        # print(self)
         self.replace_terminals()
+        # print(self)
         self.reduce_size()
+        # print(self)
 
 
 
