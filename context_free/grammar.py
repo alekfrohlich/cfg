@@ -396,6 +396,69 @@ class ContextFreeGrammar:
             del self.rules[rem]
             self.variables.discard(rem)
 
+    def replace_terminals(self):
+        new_v_id = 0
+        # does not consider already duplicated variables
+        def var_to_terminal(sym):
+            var = None
+            for v in self.variables:
+                if len(self.rules[v]) == 1 and self.rules[v][0] == (sym, ):
+                    var = v
+                    return var
+            for v in to_add_var:
+                if len(self.rules[v]) == 1 and self.rules[v][0] == (sym, ):
+                    var = v
+                    return var
+            return var
+
+        def create_new_v(sym):
+            nonlocal new_v_id
+            new_v_id += 1
+            new_v = "❬R{}❭".format(new_v_id)
+            to_add_var.add(new_v)
+            self.rules[new_v] = OrderedSet([(sym, )])
+            new_rules[new_v] = OrderedSet([(sym, )])
+            return new_v
+
+        to_add_var = OrderedSet()
+        new_rules = dict()
+        for v in self.variables:
+            to_add = OrderedSet()
+            for prod in self.rules[v]:
+                old_prod = list(prod)
+                if(len(old_prod) >= 2):
+                    for i in range(len(old_prod)):
+                        symbol = old_prod[i]
+                        if symbol in self.terminals:
+                            new_v = var_to_terminal(symbol)
+                            if new_v is None:
+                                # print("oi")
+                                new_v = create_new_v(symbol)
+                            for j in range(i, len(old_prod)):
+                                if old_prod[j] == symbol:
+                                    old_prod[j] = new_v
+                to_add.add(tuple(old_prod))
+            new_rules[v] = to_add
+
+        self.rules = new_rules
+        for v in to_add_var:
+            # print(v)
+            self.variables.add(v)
+
+        # print(self.variables)
+
+
+
+    def fnc(self):
+        self.remove_epsilon()
+        self.remove_unit()
+        self.remove_unproductives()
+        self.remove_unreachables()
+        self.replace_terminals()
+
+
+
+
 
     def left_factor(self):
         pass

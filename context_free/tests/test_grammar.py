@@ -160,3 +160,11 @@ class TestContextFreeGrammar(unittest.TestCase):
         ref_path = os.path.join(CFGS_DIR, "test_rur_1A.cfg")
         self.assertTrue(filecmp.cmp(test_path, ref_path))
 
+
+    def test_rt(self):
+        cfg = ContextFreeGrammar("test_rt_1.cfg")
+        cfg.replace_terminals()
+        cfg.save_to_file("test_rt_1T.cfg")
+        test_path = os.path.join(CFGS_DIR, "test_rt_1T.cfg")
+        ref_path = os.path.join(CFGS_DIR, "test_rt_1A.cfg")
+        self.assertTrue(filecmp.cmp(test_path, ref_path))
