@@ -447,6 +447,46 @@ class ContextFreeGrammar:
 
         # print(self.variables)
 
+    def reduce_size(self):
+
+        new_rules = dict()
+        to_add_var = OrderedSet()
+        number_v = -1
+        new_v_id = 0
+
+        for v in self.variables:
+            number_v += 1
+            new_v_id = 0
+            new_rules[v] = OrderedSet()
+            for prod in self.rules[v]:
+                lp = len(prod)
+                if lp > 2:
+                    # print(prod)
+                    new_v = "❬C({},{})❭".format(number_v, new_v_id)
+                    to_add_var.add(new_v)
+                    new_v_id += 1
+                    # print(new_v)
+                    new_rules[new_v] = OrderedSet([(prod[lp-2],prod[lp-1])])
+                    # print(OrderedSet([(prod[lp-2],prod[lp-1])]))
+                    # print(new_rules)
+                    for i in range(lp - 3, 0, -1):
+                        # print(i)
+                        # create_new_v(prod[i], new_v)
+                        old_v = new_v
+                        new_v = "❬C({},{})❭".format(number_v, new_v_id)
+                        to_add_var.add(new_v)
+                        new_rules[new_v] = OrderedSet([(prod[i],old_v)])
+                        new_v_id += 1
+
+                    new_rules[v].update(OrderedSet([(prod[0],new_v)]))
+
+                else:
+                    new_rules[v].add(prod)
+
+        self.rules = new_rules
+        for v in to_add_var:
+            self.variables.add(v)
+        # print(new_rules)
 
 
     def fnc(self):
@@ -455,6 +495,7 @@ class ContextFreeGrammar:
         self.remove_unproductives()
         self.remove_unreachables()
         self.replace_terminals()
+        self.reduce_size()
 
 
 
