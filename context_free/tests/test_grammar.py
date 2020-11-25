@@ -160,7 +160,6 @@ class TestContextFreeGrammar(unittest.TestCase):
         ref_path = os.path.join(CFGS_DIR, "test_rur_1A.cfg")
         self.assertTrue(filecmp.cmp(test_path, ref_path))
 
-
     def test_rt(self):
         cfg = ContextFreeGrammar("test_rt_1.cfg")
         cfg.replace_terminals()
@@ -176,7 +175,6 @@ class TestContextFreeGrammar(unittest.TestCase):
         test_path = os.path.join(CFGS_DIR, "test_rs_1T.cfg")
         ref_path = os.path.join(CFGS_DIR, "test_rs_1A.cfg")
         self.assertTrue(filecmp.cmp(test_path, ref_path))
-
 
         cfg = ContextFreeGrammar("test_rs_2.cfg")
         cfg.reduce_size()
@@ -233,4 +231,10 @@ class TestContextFreeGrammar(unittest.TestCase):
         print(cfg.word(""))
         print(cfg.word("i"))
         print(cfg.word("ia"))
+
+        cfg = ContextFreeGrammar("test_mt_2.cfg")
+        cfg.firsts()
+        cfg.follows()
+        cfg.make_table()
+        print(cfg.word("cvfbe;"))
 

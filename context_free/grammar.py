@@ -117,7 +117,8 @@ class ContextFreeGrammar:
                                 pass
                                 # self.variables.add(c)
                             else:
-                                self.terminals.add(c)
+                                if c != "&":
+                                    self.terminals.add(c)
                             i += 1
                     self.rules[var].add(tuple(tokenized))
                     k += 2
@@ -511,13 +512,8 @@ class ContextFreeGrammar:
         self.reduce_size()
         # print(self)
 
-
-
-
-
     def left_factor(self):
         pass
-
 
     def first_var(self, v):
         if len(self.first[v]) != 0:
@@ -530,23 +526,11 @@ class ContextFreeGrammar:
                 if "&" not in to_add:
                     self.first[v].discard("&")
                     break
-                # if p in self.terminals:
-                #     self.first[v].add(p)
-                #     break
-                # elif p in self.variables:
-                #     print("P::::{}".format(p))
-                #     to_add = self.first_var(p)
-                #     print(to_add)
-                #     self.first[v].update(to_add)
-                #     if '&' not in to_add:
-                #         break
-                # else: #&
-                #     self.first[v].add("&")
         return self.first[v]
 
-
     def firsts(self):
-        self.first["&"] = "&"
+        self.first["&"] = OrderedSet()
+        self.first["&"].add("&")
         for t in self.terminals:
             self.first[t] = OrderedSet()
             self.first[t].add(t)
@@ -557,10 +541,10 @@ class ContextFreeGrammar:
             self.first_var(v)
 
         # print("\n\n\n")
-        print("\n\nFirst")
-        for v in self.variables:
-            print(v)
-            print(self.first[v])
+        # print("\n\nFirst")
+        # for v in self.variables:
+        #     print(v)
+        #     print(self.first[v])
 
     def first_body(self, body):
         lb = len(body)
@@ -592,42 +576,30 @@ class ContextFreeGrammar:
                             # print("body[{}] = {}\nbody[{}+1:] = {}\n".format(i, body[i],i, body[i+1:]))
                             to_add = self.first_body(body[i+1:])
                             to_add.discard("&")
-                            if not to_add.issubset(self.follow[body[i]]):
+                            if not to_add.issubset(self.follow[body[i]]): # A => alfaBbeta
                                 print("tcha")
                                 add = True
                                 self.follow[body[i]].update(to_add)
                     print("teste")
                     print(lb)
+                    to_add = self.follow[head]
+                    to_add.discard("&")
                     for i in range(lb-1, -1, -1):
                         if body[i] in self.variables:
-                            to_add = self.follow[head]
-                            to_add.discard("&")
                             if not to_add.issubset(self.follow[body[i]]):
                                 print("oi")
                                 add = True
                                 self.follow[body[i]].update(to_add)
                             if "&" not in self.first[body[i]]:
                                 break
-                            # follow[i].discard("&")
                         else:
                             break
-
                         print(i)
-                    #needed to remove all &
-                    # for i in range(lb-1):
-                    #     if body[i] in self.variables:
-                    #         self.follow[body[i]].discard("&")
-
-
-                    # if body[lb-1] in self.variables:
-                    #     # print("head")
-                    #     self.follow[body[lb-1]].update(self.follow[head])
 
         print("\n\nFollow")
         for v in self.variables:
             print(v)
             print(self.follow[v])
-
 
     def make_table(self):
         id = 0
@@ -676,7 +648,8 @@ class ContextFreeGrammar:
         lw = len(w)
         head = 0
         stack = ["$", self.start]
-        for i in range(30):
+        while(True):
+            # print(stack)
             print("{} {}".format(w[head], stack))
             if stack[-1] in self.terminals or stack[-1] == "$":
                 if stack[-1] == w[head]:
@@ -704,17 +677,6 @@ class ContextFreeGrammar:
                         stack.append(prod[i])
                 else:
                     return False
-
-
-
-
-
-
-
-
-
-
-
 
 
 BOOTSTRAPPING = True
