@@ -192,3 +192,45 @@ class TestContextFreeGrammar(unittest.TestCase):
         test_path = os.path.join(CFGS_DIR, "test_fnc_1T.cfg")
         ref_path = os.path.join(CFGS_DIR, "test_fnc_1A.cfg")
         self.assertTrue(filecmp.cmp(test_path, ref_path))
+
+    def test_firsts(self):
+        cfg = ContextFreeGrammar("test_firsts_1.cfg")
+        cfg.firsts()
+        # cfg.save_to_file("test_firsts_1T.cfg")
+        # test_path = os.path.join(CFGS_DIR, "test_firsts_1T.cfg")
+        # ref_path = os.path.join(CFGS_DIR, "test_firsts_1A.cfg")
+        # self.assertTrue(filecmp.cmp(test_path, ref_path))
+
+        cfg = ContextFreeGrammar("test_firsts_2.cfg")
+        cfg.firsts()
+
+    def test_follows(self):
+        cfg = ContextFreeGrammar("test_firsts_1.cfg")
+        cfg.firsts()
+        cfg.follows()
+        # cfg.save_to_file("test_firsts_1T.cfg")
+        # test_path = os.path.join(CFGS_DIR, "test_firsts_1T.cfg")
+        # ref_path = os.path.join(CFGS_DIR, "test_firsts_1A.cfg")
+        # self.assertTrue(filecmp.cmp(test_path, ref_path))
+
+        cfg = ContextFreeGrammar("test_firsts_2.cfg")
+        cfg.firsts()
+        cfg.follows()
+
+    def test_make_table(self):
+        cfg = ContextFreeGrammar("test_mt_1.cfg")
+        cfg.firsts()
+        cfg.follows()
+        cfg.make_table()
+
+    def test_word(self):
+        cfg = ContextFreeGrammar("test_mt_1.cfg")
+        cfg.firsts()
+        cfg.follows()
+        cfg.make_table()
+        print(cfg.word("ioiai"))
+        print(cfg.word("ooi"))
+        print(cfg.word(""))
+        print(cfg.word("i"))
+        print(cfg.word("ia"))
+

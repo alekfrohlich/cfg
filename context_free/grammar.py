@@ -67,6 +67,12 @@ class ContextFreeGrammar:
         self.rules = dict()
         self.start = None
 
+        self.first = dict()
+        self.follow = dict()
+        self.prod_to_id = dict()
+        self.id_to_prod = dict()
+        self.table = dict()
+
         with open(filepath, 'r') as f:
             # ContextFreeGrammar.validate_cfg_word(f.read())
             lines = f.read().split("\n")
@@ -511,6 +517,204 @@ class ContextFreeGrammar:
 
     def left_factor(self):
         pass
+
+
+    def first_var(self, v):
+        if len(self.first[v]) != 0:
+            return self.first[v]
+
+        for prod in self.rules[v]:
+            for p in prod:
+                to_add = self.first_var(p)
+                self.first[v].update(to_add)
+                if "&" not in to_add:
+                    self.first[v].discard("&")
+                    break
+                # if p in self.terminals:
+                #     self.first[v].add(p)
+                #     break
+                # elif p in self.variables:
+                #     print("P::::{}".format(p))
+                #     to_add = self.first_var(p)
+                #     print(to_add)
+                #     self.first[v].update(to_add)
+                #     if '&' not in to_add:
+                #         break
+                # else: #&
+                #     self.first[v].add("&")
+        return self.first[v]
+
+
+    def firsts(self):
+        self.first["&"] = "&"
+        for t in self.terminals:
+            self.first[t] = OrderedSet()
+            self.first[t].add(t)
+        for v in self.variables:
+            self.first[v] = OrderedSet()
+
+        for v in self.variables:
+            self.first_var(v)
+
+        # print("\n\n\n")
+        print("\n\nFirst")
+        for v in self.variables:
+            print(v)
+            print(self.first[v])
+
+    def first_body(self, body):
+        lb = len(body)
+
+        total = OrderedSet()
+        for b in body:
+            to_add = self.first[b]
+            total.update(to_add)
+            if "&" not in to_add:
+                total.discard("&")
+                break
+        return total
+
+    def follows(self):
+        for v in self.variables:
+            self.follow[v] = OrderedSet()
+
+        self.follow[self.start].add("$")
+        add = True
+        while(add):
+            add = False
+            for head, bodies in self.rules.items():
+                for body in bodies:
+                    # print("head: {}      body = {}".format(head, body))
+                    lb = len(body)
+                    # print(body)
+                    for i in range(lb-1):
+                        if body[i] in self.variables:
+                            # print("body[{}] = {}\nbody[{}+1:] = {}\n".format(i, body[i],i, body[i+1:]))
+                            to_add = self.first_body(body[i+1:])
+                            to_add.discard("&")
+                            if not to_add.issubset(self.follow[body[i]]):
+                                print("tcha")
+                                add = True
+                                self.follow[body[i]].update(to_add)
+                    print("teste")
+                    print(lb)
+                    for i in range(lb-1, -1, -1):
+                        if body[i] in self.variables:
+                            to_add = self.follow[head]
+                            to_add.discard("&")
+                            if not to_add.issubset(self.follow[body[i]]):
+                                print("oi")
+                                add = True
+                                self.follow[body[i]].update(to_add)
+                            if "&" not in self.first[body[i]]:
+                                break
+                            # follow[i].discard("&")
+                        else:
+                            break
+
+                        print(i)
+                    #needed to remove all &
+                    # for i in range(lb-1):
+                    #     if body[i] in self.variables:
+                    #         self.follow[body[i]].discard("&")
+
+
+                    # if body[lb-1] in self.variables:
+                    #     # print("head")
+                    #     self.follow[body[lb-1]].update(self.follow[head])
+
+        print("\n\nFollow")
+        for v in self.variables:
+            print(v)
+            print(self.follow[v])
+
+
+    def make_table(self):
+        id = 0
+        for head, bodies in self.rules.items():
+            for body in bodies:
+                id+=1
+                self.prod_to_id[(head, body)] = id
+                self.id_to_prod[id] = (head, body)
+
+        for v in self.variables:
+            for t in self.terminals:
+                self.table[(v, t)] = -1
+        for v in self.variables:
+            self.table[(v, "$")] = -1
+
+        for v in self.variables:
+            for alpha in self.rules[v]:
+                first = self.first_body(alpha)
+                for f in first:
+                    if f != "&":
+                        if self.table[(v, f)] != -1:
+                            print("\n\n\n\nERRO\n\n\n\n=====================================\n\n\n\n")
+                        self.table[(v, f)] = self.prod_to_id[(v, alpha)]
+                if "&" in first:
+                    for f in self.follow[v]:
+                        if self.table[(v, f)] != -1:
+                            print("\n\n\n\nERRO\n\n\n\n=====================================\n\n\n\n")
+                        self.table[(v, f)] = self.prod_to_id[(v, alpha)]
+
+        for t in self.terminals:
+            print("{} ".format(t), end="")
+        print("$")
+
+        for head, bodies in self.rules.items():
+            for body in bodies:
+                print("head:{}   body:{}     id:{}", head, body, self.prod_to_id[(head,body)])
+
+        for v in self.variables:
+            print("{}:: ".format(v), end="")
+            for t in self.terminals:
+                print("{} ".format(self.table[(v, t)]), end="")
+            print("{}".format(self.table[(v, "$")]))
+
+    def word(self, w):
+        w+="$"
+        lw = len(w)
+        head = 0
+        stack = ["$", self.start]
+        for i in range(30):
+            print("{} {}".format(w[head], stack))
+            if stack[-1] in self.terminals or stack[-1] == "$":
+                if stack[-1] == w[head]:
+                    if w[head] == "$":
+                        return True
+                    else:
+                        stack.pop()
+                        head+=1
+                else:
+                    return False
+            else:
+                id_table = self.table[(stack[-1], w[head])]
+                if id_table != -1:
+                    stack.pop()
+                    var, prod = self.id_to_prod[id_table]
+                    lp = len(prod)
+                    # print(id_table)
+                    # print(stack)
+                    # print(prod)
+                    if prod == ("&",):
+                        # print("oi")
+                        continue
+                    for i in range(lp-1, -1, -1):
+                        # print("oi")
+                        stack.append(prod[i])
+                else:
+                    return False
+
+
+
+
+
+
+
+
+
+
+
 
 
 BOOTSTRAPPING = True
