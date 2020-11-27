@@ -308,6 +308,50 @@ class TestContextFreeGrammar(unittest.TestCase):
         cfg = ContextFreeGrammar("test_fnc_1.cfg")
         self.assertFalse(cfg.has_cycle())
 
+
+    def test_lf(self):
+        cfg = ContextFreeGrammar("test_lf_1.cfg")
+        cfg.left_factoring()
+        cfg.save_to_file("test_lf_1T.cfg")
+        test_path = os.path.join(CFGS_DIR, "test_lf_1T.cfg")
+        ref_path = os.path.join(CFGS_DIR, "test_lf_1A.cfg")
+        self.assertTrue(filecmp.cmp(test_path, ref_path))
+
+        cfg = ContextFreeGrammar("test_lf_2.cfg")
+        cfg.left_factoring()
+        cfg.save_to_file("test_lf_2T.cfg")
+        test_path = os.path.join(CFGS_DIR, "test_lf_2T.cfg")
+        ref_path = os.path.join(CFGS_DIR, "test_lf_2A.cfg")
+        self.assertTrue(filecmp.cmp(test_path, ref_path))
+
+        cfg = ContextFreeGrammar("test_lf_3.cfg")
+        cfg.left_factoring()
+        cfg.save_to_file("test_lf_3T.cfg")
+        test_path = os.path.join(CFGS_DIR, "test_lf_3T.cfg")
+        ref_path = os.path.join(CFGS_DIR, "test_lf_3A.cfg")
+        self.assertTrue(filecmp.cmp(test_path, ref_path))
+
+        cfg = ContextFreeGrammar("test_lf_4.cfg")
+        self.assertFalse(cfg.left_factoring())
+
+        cfg = ContextFreeGrammar("test_lf_5.cfg")
+        self.assertFalse(cfg.left_factoring())
+
+        cfg = ContextFreeGrammar("test_lf_6.cfg")
+        cfg.left_factoring()
+        cfg.save_to_file("test_lf_6T.cfg")
+        test_path = os.path.join(CFGS_DIR, "test_lf_6T.cfg")
+        ref_path = os.path.join(CFGS_DIR, "test_lf_6A.cfg")
+        self.assertTrue(filecmp.cmp(test_path, ref_path))
+
+        cfg = ContextFreeGrammar("test_lf_exs_4c.cfg")
+        cfg.left_factoring()
+        cfg.save_to_file("test_lf_exs_4cT.cfg")
+        test_path = os.path.join(CFGS_DIR, "test_lf_exs_4cT.cfg")
+        ref_path = os.path.join(CFGS_DIR, "test_lf_exs_4cA.cfg")
+        self.assertTrue(filecmp.cmp(test_path, ref_path))
+
+
     # def test_firsts(self):
     #     cfg = ContextFreeGrammar("test_firsts_1.cfg")
     #     cfg.firsts()

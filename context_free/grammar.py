@@ -602,6 +602,8 @@ class ContextFreeGrammar:
             edges[v] = OrderedSet()
         for v in self.variables:
             for prod in self.rules[v]:
+                # print(v)
+                # print(prod)
                 if prod[0] in self.variables:
                     edges[v].add(prod[0])
 
@@ -781,9 +783,168 @@ class ContextFreeGrammar:
                 else:
                     return False
 
+    def prod_id(self):
+        id = 0
+        for head, bodies in self.rules.items():
+            for body in bodies:
+                id+=1
+                self.prod_to_id[(head, body)] = id
+                self.id_to_prod[id] = (head, body)
+
 
     def left_factoring(self):
-        pass
+        """
+        NOTES
+        -------------
+        I am not considering ndet that produces &, maybe this algorithm works with &
+        but I do not know it yet
+        example:
+        S -> A | &
+        A -> &
+
+        S -> a | B
+        B -> a
+
+        S -> iVe
+        V -> e | a | &
+
+        S -> ie | iee | iae
+        V -> e | a | &
+
+        F ->
+
+        this algorithm does not remove ndet that is inside of a production
+        """
+        firsts_v = dict()
+        new_var_id = 0
+
+        def sub_var(prod):
+            to_add = OrderedSet()
+            for prod_var in self.rules[prod[0]]:
+                if prod_var == ("&",):
+                    if len(prod[1:]) == 0:
+                        to_add.add(("&", ))
+                    else:
+                        to_add.add(prod[1:])
+                else:
+                    to_add.add(prod_var+prod[1:])
+            return to_add
+#S -> Ab | Cv                    S -> ab | db | av |ae
+# A -> a | d
+# C -> a | e
+
+        def substitute_ndet_var(ndet_term):
+            anyV = True
+            # print("V:::{}".format(v))
+            while(anyV):
+                # print("ALO")
+                anyV = False
+                new_rules_v = OrderedSet()
+                to_add = OrderedSet()
+                for prod in self.rules[v]:
+                    # print("FOr")
+                    # print(prod)
+                    if prod[0] in self.variables and ndet_term in self.first_body(prod):
+                        to_add.update(sub_var(prod))
+                        anyV = True
+                    else:
+                        to_add.add(prod)
+                self.rules[v] = to_add
+                # print(to_add)
+
+        def get_largest_common_prefix_2(str1, str2):
+            if len(str1) > len(str2):
+                str_t = str2
+                str2 = str1
+                str1 = str_t
+            l1 = len(str1)
+            for i in range(l1):
+                if str1[i] != str2[i]:
+                    return str1[:i]
+            return str1
+        def get_largest_common_prefix():
+            for prod in self.rules[v]:
+                if prod[0] == ndet_term:
+                    lcp = prod
+                    break
+
+            for prod in self.rules[v]:
+                if prod[0] == ndet_term:
+                    lcp = get_largest_common_prefix_2(lcp, prod)
+            # print("lcp::{}".format(lcp))
+            return lcp
+
+        def create_new_var_lcp():
+            nonlocal new_var_id
+            new_rules_old_v = OrderedSet()
+            new_var_id = new_var_id+ 1
+            if len(v) == 1:
+                new_var = "❬{},{}❭".format(v, new_var_id)
+            else:
+                new_var = "❬{},{}❭".format(v[1], new_var_id)
+            self.rules[new_var] = OrderedSet()
+            self.variables.add(new_var)
+
+            ll = len(lcp)
+            for prod in self.rules[v]:
+                if prod[0] == ndet_term:
+                    new_rules_old_v.add(lcp+(new_var,))
+                    if len(prod[ll:]) != 0:
+                        self.rules[new_var].add(prod[ll:])
+                    else:
+                        self.rules[new_var].add(("&",))
+                else:
+                    new_rules_old_v.add(prod)
+
+            self.rules[v] = new_rules_old_v
+
+
+
+        print()
+
+        for i in range(20):
+            anynd = False
+            for v in self.variables:
+                self.firsts()
+                # print(v)
+                firsts_v.clear()
+                # self.prod_id()
+                ndet_term = None
+                # ndet_prod = OrderedSet()
+                total = OrderedSet()
+
+                for prod in self.rules[v]: #choose ndet_term
+                    # print(prod)
+                    firsts_v[prod] = self.first_body(prod)
+                    # print(firsts_v[prod])
+
+                    for ter in firsts_v[prod]:
+                        if ter != "&":
+                            if ter in total and ndet_term is None:
+                                print("ndet_ter")
+                                print(ter)
+                                ndet_term = ter
+                        total.add(ter)
+
+                if not ndet_term is None:
+                    # print("SUb")
+                    anynd = True
+                    print("\n\nGRAMMAR Normal")
+                    print(self)
+                    # indirect
+                    substitute_ndet_var(ndet_term)
+                    print("\n\nGRAMMAR Ind")
+                    print(self)
+                    # direct
+                    lcp = get_largest_common_prefix()
+                    create_new_var_lcp()
+                    print("\n\nGRAMMAR Dir")
+                    print(self)
+                    break
+            if not anynd:
+                print("Finished in {} step(s)".format(i))
+                return True
+        return False
 
 
 BOOTSTRAPPING = True
