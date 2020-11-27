@@ -168,11 +168,63 @@ class ContextFreeGrammar:
         else:
             print("SPECS ALREADY ON")
 
-    def remove_left_recursion(self):
+    def has_e(self): #ok
+        for v in self.variables:
+            for prod in self.rules[v]:
+                if v != self.start and prod == ("&", ):
+                    return True
+        return False
+
+    def has_cycle(self): #ok
         """
-        Pre-conditions
+        Notes
+        -----
+            has_cycle is very similar to remove_unti. The only diffetence is that
+            has_cycle does not change the grammar.
+        """
+        def bfs(s):
+            visited[s] = True
+            q = deque()
+            q.append(s)
+            v = s
+            while len(q) > 0:
+                v = q.pop()
+                for u in edges[v]:
+                    if not visited[u]:
+                        visited[u] = True
+                        q.append(u)
+
+        edges = dict()
+        for var in self.variables:
+            edges[var] = OrderedSet()
+
+        for h in self.variables:
+            if h in self.rules.keys():
+                for b in self.rules[h]:
+                    if len(b) == 1 and b[0] in self.variables:
+                        edges[h].add(b[0])
+        new_rules = dict()
+        for var in self.variables:
+            new_rules[var] = OrderedSet()
+
+        for var in self.variables:
+            visited = dict()
+            for va in self.variables:
+                visited[va] = False
+            bfs(var)
+            for contender in self.variables:
+                if visited[contender]:
+                    for prod in self.rules[contender]:
+                        if prod == (var,):
+                            return True
+        return False
+
+    def remove_left_recursion(self): #ok
+        """
+        Exceptions
         --------------
-            1. self is e-free and cycle-free.
+            1. self is not e-free.
+            2. self is not cycle-free.
 
         Notes
         -----
@@ -181,6 +233,17 @@ class ContextFreeGrammar:
             there may be S => Sbeta, where beta has no productions.
 
         """
+        if self.has_e():
+            print("\n\nGRAMMAR IS NOT &-free\n& has not been removed")
+            print("You need to call remove_epsilon\n\n")
+            return False
+
+        if self.has_cycle():
+            print("\n\nGRAMMAR IS NOT cycle-free\nCyclical productions have not been removed")
+            print("You need to call remove_unit")
+            print("Note that remove_unit will remove cyclical productions and unit productions\n\n")
+            return False
+
         # Remove indirect
         for i in range(len(self.variables)):
             direct = False
@@ -210,17 +273,21 @@ class ContextFreeGrammar:
                         self.rules[new_var].add(production[1:]+(new_var, ))
                     else:
                         new_prods_i.add(production+(new_var, ))
-                # if len(new_prods_i) == 0:
-                #     new_prods_i.add((new_var,))
+
                 self.rules[self.variables[i]] = new_prods_i
                 self.rules[new_var].add(('&',))
 
-    def remove_unit(self):
-        """Find smallest fixed-point for the system:
-        (...)
+    def remove_unit(self): #ok
+        """
+        Post-conditions: may return variable with no production
 
+        Note:
+        In this algorithm cyclical productions will be eliminated.
+        A -> B                          A ->
+        B -> C         -------->        B ->
+        C -> A                          C ->
 
-
+        Our algorithm takes care of cyclical productions
         """
         def bfs(s):
             visited[s] = True
@@ -259,8 +326,8 @@ class ContextFreeGrammar:
                             new_rules[var].add(prod)
         self.rules = new_rules
 
+    def remove_epsilon(self): #ok
 
-    def remove_epsilon(self):
         def power_set(i, cuts):
             if i == len(cuts[0]):
                 new_ps = OrderedSet()
@@ -276,22 +343,9 @@ class ContextFreeGrammar:
             if cuts[0][i] in nullables:
                 to_add = OrderedSet()
                 for s in cuts:
-                    to_add.add(s[:i] + ("$",) + s[i+1:]) #FIXME: does it work for i <= 2? apparently, it does
+                    to_add.add(s[:i] + ("$",) + s[i+1:])
                 cuts.update(to_add)
             return power_set(i+1, cuts)
-
-        def pre_power_set(i, cuts):
-            # if len(cuts[0]) == 1:
-            #     print("oi")
-            #     if cuts[0] != ("&", ):
-            #         return cuts[0]
-            # if len(cuts[0]) == 2:
-            #     to_add = OrderedSet(cuts[0])
-            #     if cuts[0][0] in nullables:
-            #         to_add.add(cuts[0][1:])
-            #     if cuts[0][1] in nullables:
-            #         to_add.add(cuts[0][:1])
-            return power_set(i, cuts)
 
         nullables = OrderedSet()
         nullables.add("&")
@@ -308,7 +362,7 @@ class ContextFreeGrammar:
         for var in self.variables:
             to_add = OrderedSet()
             for prod in self.rules[var]:
-                to_add.update(pre_power_set(0, OrderedSet([prod])))
+                to_add.update(power_set(0, OrderedSet([prod])))
             self.rules[var].update(to_add)
             if ("&", ) in self.rules[var]:
                 self.rules[var].discard(("&", ))
@@ -318,12 +372,18 @@ class ContextFreeGrammar:
             self.rules["❬'{}❭".format(self.start)] = OrderedSet([(self.start, ), ("&", )])
             self.start = "❬'{}❭".format(self.start)
 
-    def remove_unproductives(self):
+    def remove_unproductives(self): #ok
+        """
+        Notes:
+
+        If the grammar generates no words (empty language) then the grammar returned will be
+            start_symbol -> start_symbol
+        and it will keep its terminals.
+        """
         productives = OrderedSet()
         for t in self.terminals:
             productives.add(t)
         productives.add("&")
-        # print(productives)
 
         changed = True
         while changed:
@@ -334,19 +394,14 @@ class ContextFreeGrammar:
                         productives.add(var)
                         changed = True
 
-        # print(productives)
-
         new_rules = dict()
         for v in self.variables:
             new_production = OrderedSet()
             for production in self.rules[v]:
-                # print("prod:")
-                # print(production)
                 if all([p in productives for p in production]):
                     new_production.add(production)
             new_rules[v] = new_production
 
-        # print(new_rules)
         self.rules = new_rules
 
         to_remove = OrderedSet()
@@ -358,10 +413,18 @@ class ContextFreeGrammar:
             del self.rules[rem]
             self.variables.discard(rem)
 
-        if (len(self.rules[self.start]) == 0):
-            print("NAO SEI O QUE FAZER")
+        # if empty language
+        if self.start not in self.rules.keys():
+            self.variables = OrderedSet()
+            self.rules = dict()
+            self.variables.add(self.start)
+            self.rules[self.start] = OrderedSet()
+            self.rules[self.start].add(self.start)
 
-    def remove_unreachables(self):
+    def remove_unreachables(self): #ok
+        """
+        Pre_conditions: None
+        """
         def bfs(s):
             visited[s] = True
             q = deque()
@@ -403,9 +466,14 @@ class ContextFreeGrammar:
             del self.rules[rem]
             self.variables.discard(rem)
 
-    def replace_terminals(self):
+    def replace_terminals(self): #ok
+        """
+        Pre_conditions: None
+        """
         new_v_id = 0
-        # does not consider already duplicated variables
+
+        #var_to_terminal checks if variable already exists or if variable has already been created
+        # var_to_terminal does not consider already duplicated variables
         def var_to_terminal(sym):
             var = None
             for v in self.variables:
@@ -418,6 +486,7 @@ class ContextFreeGrammar:
                     return var
             return var
 
+        # create_new_v creates new variable
         def create_new_v(sym):
             nonlocal new_v_id
             new_v_id += 1
@@ -454,7 +523,7 @@ class ContextFreeGrammar:
 
         # print(self.variables)
 
-    def reduce_size(self):
+    def reduce_size(self): #ok
         # reduce_size does not check if new_v was already in the grammar
 
         new_rules = dict()
@@ -469,17 +538,12 @@ class ContextFreeGrammar:
             for prod in self.rules[v]:
                 lp = len(prod)
                 if lp > 2:
-                    # print(prod)
                     new_v = "❬C({},{})❭".format(number_v, new_v_id)
                     to_add_var.add(new_v)
                     new_v_id += 1
-                    # print(new_v)
                     new_rules[new_v] = OrderedSet([(prod[lp-2],prod[lp-1])])
-                    # print(OrderedSet([(prod[lp-2],prod[lp-1])]))
-                    # print(new_rules)
+
                     for i in range(lp - 3, 0, -1):
-                        # print(i)
-                        # create_new_v(prod[i], new_v)
                         old_v = new_v
                         new_v = "❬C({},{})❭".format(number_v, new_v_id)
                         to_add_var.add(new_v)
@@ -487,35 +551,24 @@ class ContextFreeGrammar:
                         new_v_id += 1
 
                     new_rules[v].update(OrderedSet([(prod[0],new_v)]))
-
                 else:
                     new_rules[v].add(prod)
 
         self.rules = new_rules
         for v in to_add_var:
             self.variables.add(v)
-        # print(new_rules)
 
-
-    def fnc(self):
-        # print(self)
+    def fnc(self): #ok
         self.remove_epsilon()
-        # print(self)
         self.remove_unit()
-        # print(self)
         self.remove_unproductives()
-        # print(self)
         self.remove_unreachables()
-        # print(self)
         self.replace_terminals()
-        # print(self)
         self.reduce_size()
-        # print(self)
 
-    def left_factor(self):
-        pass
-
-    def first_var(self, v):
+    def first_var(self, v): #ok
+        # first_var calculates first(v) using DP
+        # DP is not used to calculate the first of a sentence
         if len(self.first[v]) != 0:
             return self.first[v]
 
@@ -528,7 +581,51 @@ class ContextFreeGrammar:
                     break
         return self.first[v]
 
-    def firsts(self):
+    def has_left_recursion(self): #ok
+        def bfs(s):
+            visited[s] = True
+            q = deque()
+            q.append(s)
+            v = s
+            while len(q) > 0:
+                v = q.pop()
+                for u in edges[v]:
+                    if u == s:
+                        return True
+                    if not visited[u]:
+                        visited[u] = True
+                        q.append(u)
+            return False
+
+        edges = dict()
+        for v in self.variables:
+            edges[v] = OrderedSet()
+        for v in self.variables:
+            for prod in self.rules[v]:
+                if prod[0] in self.variables:
+                    edges[v].add(prod[0])
+
+
+        for v in self.variables:
+            visited = dict()
+            for var in self.variables:
+                visited[var] = False
+            if bfs(v):
+                return True
+
+        return False
+
+    def firsts(self): #ok
+        """
+        Exceptions
+        --------------
+            1. self has left recursion.
+        """
+        if self.has_left_recursion():
+            print("\n\nGRAMMAR HAS LEFT RECURSION\nNone first has been calculated")
+            print("You need to call remove_left_recursion\n\n")
+            return False
+
         self.first["&"] = OrderedSet()
         self.first["&"].add("&")
         for t in self.terminals:
@@ -540,13 +637,16 @@ class ContextFreeGrammar:
         for v in self.variables:
             self.first_var(v)
 
-        # print("\n\n\n")
-        # print("\n\nFirst")
-        # for v in self.variables:
-        #     print(v)
-        #     print(self.first[v])
+    def first_body(self, body): #ok
+        """
+        Pre-conditions
+        --------------
+            1. self.first() has already been called.
 
-    def first_body(self, body):
+        NOTES
+        -------------
+        first_body calculates the first of a sentence
+        """
         lb = len(body)
 
         total = OrderedSet()
@@ -558,7 +658,12 @@ class ContextFreeGrammar:
                 break
         return total
 
-    def follows(self):
+    def follows(self): #ok
+        """
+        Pre-conditions
+        --------------
+            1. self.first() has already been called.
+        """
         for v in self.variables:
             self.follow[v] = OrderedSet()
 
@@ -568,40 +673,39 @@ class ContextFreeGrammar:
             add = False
             for head, bodies in self.rules.items():
                 for body in bodies:
-                    # print("head: {}      body = {}".format(head, body))
                     lb = len(body)
-                    # print(body)
                     for i in range(lb-1):
                         if body[i] in self.variables:
-                            # print("body[{}] = {}\nbody[{}+1:] = {}\n".format(i, body[i],i, body[i+1:]))
                             to_add = self.first_body(body[i+1:])
                             to_add.discard("&")
-                            if not to_add.issubset(self.follow[body[i]]): # A => alfaBbeta
-                                print("tcha")
+                            if not to_add.issubset(self.follow[body[i]]):
                                 add = True
                                 self.follow[body[i]].update(to_add)
-                    print("teste")
-                    print(lb)
                     to_add = self.follow[head]
                     to_add.discard("&")
                     for i in range(lb-1, -1, -1):
                         if body[i] in self.variables:
                             if not to_add.issubset(self.follow[body[i]]):
-                                print("oi")
                                 add = True
                                 self.follow[body[i]].update(to_add)
                             if "&" not in self.first[body[i]]:
                                 break
                         else:
                             break
-                        print(i)
 
-        print("\n\nFollow")
-        for v in self.variables:
-            print(v)
-            print(self.follow[v])
+    def make_table(self): #ok
+        """
+        Pre-conditions
+        --------------
+            1. self does not have left recursion.
+            2. self.firsts() has already been called.
+            3. self.follows() has already been called.
 
-    def make_table(self):
+        Exceptions
+        --------------
+            1. self is not left-factored.
+        """
+
         id = 0
         for head, bodies in self.rules.items():
             for body in bodies:
@@ -621,35 +725,39 @@ class ContextFreeGrammar:
                 for f in first:
                     if f != "&":
                         if self.table[(v, f)] != -1:
-                            print("\n\n\n\nERRO\n\n\n\n=====================================\n\n\n\n")
+                            print("\n\n\nNOT LEFT-FACTORED\nYou need to use the method remove_left_recursion\n\n\n")
                         self.table[(v, f)] = self.prod_to_id[(v, alpha)]
                 if "&" in first:
                     for f in self.follow[v]:
                         if self.table[(v, f)] != -1:
-                            print("\n\n\n\nERRO\n\n\n\n=====================================\n\n\n\n")
+                            print("\n\n\nNOT LEFT-FACTORED\nYou need to use the method remove_left_recursion\n\n\n")
                         self.table[(v, f)] = self.prod_to_id[(v, alpha)]
 
-        for t in self.terminals:
-            print("{} ".format(t), end="")
-        print("$")
+        # for t in self.terminals:
+        #     print("{} ".format(t), end="")
+        # print("$")
 
-        for head, bodies in self.rules.items():
-            for body in bodies:
-                print("head:{}   body:{}     id:{}", head, body, self.prod_to_id[(head,body)])
+        # for head, bodies in self.rules.items():
+        #     for body in bodies:
+        #         print("head:{}   body:{}     id:{}", head, body, self.prod_to_id[(head,body)])
 
-        for v in self.variables:
-            print("{}:: ".format(v), end="")
-            for t in self.terminals:
-                print("{} ".format(self.table[(v, t)]), end="")
-            print("{}".format(self.table[(v, "$")]))
+        # for v in self.variables:
+        #     print("{}:: ".format(v), end="")
+        #     for t in self.terminals:
+        #         print("{} ".format(self.table[(v, t)]), end="")
+        #     print("{}".format(self.table[(v, "$")]))
 
-    def word(self, w):
+    def word(self, w): #ok
+        """
+        Pre-conditions
+        --------------
+            1. make_table has already been called and printed no error messages.
+        """
         w+="$"
         lw = len(w)
         head = 0
         stack = ["$", self.start]
         while(True):
-            # print(stack)
             print("{} {}".format(w[head], stack))
             if stack[-1] in self.terminals or stack[-1] == "$":
                 if stack[-1] == w[head]:
@@ -666,17 +774,16 @@ class ContextFreeGrammar:
                     stack.pop()
                     var, prod = self.id_to_prod[id_table]
                     lp = len(prod)
-                    # print(id_table)
-                    # print(stack)
-                    # print(prod)
                     if prod == ("&",):
-                        # print("oi")
                         continue
                     for i in range(lp-1, -1, -1):
-                        # print("oi")
                         stack.append(prod[i])
                 else:
                     return False
+
+
+    def left_factoring(self):
+        pass
 
 
 BOOTSTRAPPING = True

@@ -121,6 +121,20 @@ class TestContextFreeGrammar(unittest.TestCase):
         ref_path = os.path.join(CFGS_DIR, "test_ru_3A.cfg")
         self.assertTrue(filecmp.cmp(test_path, ref_path))
 
+        cfg = ContextFreeGrammar("test_ru_4.cfg")
+        cfg.remove_unit()
+        cfg.save_to_file("test_ru_4T.cfg")
+        test_path = os.path.join(CFGS_DIR, "test_ru_4T.cfg")
+        ref_path = os.path.join(CFGS_DIR, "test_ru_4A.cfg")
+        self.assertTrue(filecmp.cmp(test_path, ref_path))
+
+        cfg = ContextFreeGrammar("test_ru_5.cfg")
+        cfg.remove_unit()
+        cfg.save_to_file("test_ru_5T.cfg")
+        test_path = os.path.join(CFGS_DIR, "test_ru_5T.cfg")
+        ref_path = os.path.join(CFGS_DIR, "test_ru_5A.cfg")
+        self.assertTrue(filecmp.cmp(test_path, ref_path))
+
     def test_re(self):
         cfg = ContextFreeGrammar("test_re_1.cfg")
         cfg.remove_epsilon()
@@ -136,6 +150,13 @@ class TestContextFreeGrammar(unittest.TestCase):
         ref_path = os.path.join(CFGS_DIR, "test_re_2A.cfg")
         self.assertTrue(filecmp.cmp(test_path, ref_path))
 
+        cfg = ContextFreeGrammar("test_re_3.cfg")
+        cfg.remove_epsilon()
+        cfg.save_to_file("test_re_3T.cfg")
+        test_path = os.path.join(CFGS_DIR, "test_re_3T.cfg")
+        ref_path = os.path.join(CFGS_DIR, "test_re_3A.cfg")
+        self.assertTrue(filecmp.cmp(test_path, ref_path))
+
     def test_rup(self):
         cfg = ContextFreeGrammar("test_rup_1.cfg")
         cfg.remove_unproductives()
@@ -145,12 +166,12 @@ class TestContextFreeGrammar(unittest.TestCase):
         self.assertTrue(filecmp.cmp(test_path, ref_path))
 
         # FIXME: empty language
-        # cfg = ContextFreeGrammar("test_rup_2.cfg")
-        # cfg.remove_unproductives()
-        # cfg.save_to_file("test_rup_2T.cfg")
-        # test_path = os.path.join(CFGS_DIR, "test_rup_2T.cfg")
-        # ref_path = os.path.join(CFGS_DIR, "test_rup_2A.cfg")
-        # self.assertTrue(filecmp.cmp(test_path, ref_path))
+        cfg = ContextFreeGrammar("test_rup_2.cfg")
+        cfg.remove_unproductives()
+        cfg.save_to_file("test_rup_2T.cfg")
+        test_path = os.path.join(CFGS_DIR, "test_rup_2T.cfg")
+        ref_path = os.path.join(CFGS_DIR, "test_rup_2A.cfg")
+        self.assertTrue(filecmp.cmp(test_path, ref_path))
 
     def test_rur(self):
         cfg = ContextFreeGrammar("test_rur_1.cfg")
@@ -191,50 +212,146 @@ class TestContextFreeGrammar(unittest.TestCase):
         ref_path = os.path.join(CFGS_DIR, "test_fnc_1A.cfg")
         self.assertTrue(filecmp.cmp(test_path, ref_path))
 
-    def test_firsts(self):
+    def test_hlr(self):
+        cfg = ContextFreeGrammar("test_rlr_1.cfg")
+        self.assertTrue(cfg.has_left_recursion())
+
+        cfg = ContextFreeGrammar("test_rlr_2.cfg")
+        self.assertTrue(cfg.has_left_recursion())
+
+        cfg = ContextFreeGrammar("test_rlr_exs_3a.cfg")
+        self.assertTrue(cfg.has_left_recursion())
+
+        cfg = ContextFreeGrammar("test_rlr_exs_3b.cfg")
+        self.assertTrue(cfg.has_left_recursion())
+
+        cfg = ContextFreeGrammar("test_rlr_1A.cfg")
+        self.assertFalse(cfg.has_left_recursion())
+
+        cfg = ContextFreeGrammar("test_rlr_2A.cfg")
+        self.assertFalse(cfg.has_left_recursion())
+
+        cfg = ContextFreeGrammar("test_rlr_exs_3aA.cfg")
+        self.assertFalse(cfg.has_left_recursion())
+
+        cfg = ContextFreeGrammar("test_rlr_exs_3bA.cfg")
+        self.assertFalse(cfg.has_left_recursion())
+
         cfg = ContextFreeGrammar("test_firsts_1.cfg")
-        cfg.firsts()
-        # cfg.save_to_file("test_firsts_1T.cfg")
-        # test_path = os.path.join(CFGS_DIR, "test_firsts_1T.cfg")
-        # ref_path = os.path.join(CFGS_DIR, "test_firsts_1A.cfg")
-        # self.assertTrue(filecmp.cmp(test_path, ref_path))
+        self.assertFalse(cfg.has_left_recursion())
 
         cfg = ContextFreeGrammar("test_firsts_2.cfg")
-        cfg.firsts()
+        self.assertFalse(cfg.has_left_recursion())
 
-    def test_follows(self):
-        cfg = ContextFreeGrammar("test_firsts_1.cfg")
-        cfg.firsts()
-        cfg.follows()
-        # cfg.save_to_file("test_firsts_1T.cfg")
-        # test_path = os.path.join(CFGS_DIR, "test_firsts_1T.cfg")
-        # ref_path = os.path.join(CFGS_DIR, "test_firsts_1A.cfg")
-        # self.assertTrue(filecmp.cmp(test_path, ref_path))
+    def test_he(self):
+        cfg = ContextFreeGrammar("test_re_1.cfg")
+        self.assertTrue(cfg.has_e())
 
-        cfg = ContextFreeGrammar("test_firsts_2.cfg")
-        cfg.firsts()
-        cfg.follows()
+        cfg = ContextFreeGrammar("test_re_2.cfg")
+        self.assertTrue(cfg.has_e())
 
-    def test_make_table(self):
-        cfg = ContextFreeGrammar("test_mt_1.cfg")
-        cfg.firsts()
-        cfg.follows()
-        cfg.make_table()
+        cfg = ContextFreeGrammar("test_re_3.cfg")
+        self.assertTrue(cfg.has_e())
 
-    def test_word(self):
-        cfg = ContextFreeGrammar("test_mt_1.cfg")
-        cfg.firsts()
-        cfg.follows()
-        cfg.make_table()
-        print(cfg.word("ioiai"))
-        print(cfg.word("ooi"))
-        print(cfg.word(""))
-        print(cfg.word("i"))
-        print(cfg.word("ia"))
+        cfg = ContextFreeGrammar("test_re_1A.cfg")
+        self.assertFalse(cfg.has_e())
 
-        cfg = ContextFreeGrammar("test_mt_2.cfg")
-        cfg.firsts()
-        cfg.follows()
-        cfg.make_table()
-        print(cfg.word("cvfbe;"))
+        cfg = ContextFreeGrammar("test_re_2A.cfg")
+        self.assertFalse(cfg.has_e())
+
+        cfg = ContextFreeGrammar("test_re_3A.cfg")
+        self.assertFalse(cfg.has_e())
+
+        cfg = ContextFreeGrammar("test_rlr_exs_3aA.cfg")
+        self.assertTrue(cfg.has_e())
+
+        cfg = ContextFreeGrammar("test_rlr_exs_3bA.cfg")
+        self.assertTrue(cfg.has_e())
+
+        cfg = ContextFreeGrammar("test_rlr_exs_3aA.cfg")
+        cfg.remove_epsilon()
+        self.assertFalse(cfg.has_e())
+
+        cfg = ContextFreeGrammar("test_rlr_exs_3bA.cfg")
+        cfg.remove_epsilon()
+        self.assertFalse(cfg.has_e())
+
+    def test_hc(self):
+        cfg = ContextFreeGrammar("test_hc_1.cfg")
+        self.assertTrue(cfg.has_cycle())
+
+        cfg = ContextFreeGrammar("test_hc_2.cfg")
+        self.assertTrue(cfg.has_cycle())
+
+        cfg = ContextFreeGrammar("test_hc_3.cfg")
+        self.assertTrue(cfg.has_cycle())
+
+        cfg = ContextFreeGrammar("test_hc_4.cfg")
+        self.assertTrue(cfg.has_cycle())
+
+        cfg = ContextFreeGrammar("test_hc_1.cfg")
+        cfg.remove_unit()
+        self.assertFalse(cfg.has_cycle())
+
+        cfg = ContextFreeGrammar("test_hc_2.cfg")
+        cfg.remove_unit()
+        self.assertFalse(cfg.has_cycle())
+
+        cfg = ContextFreeGrammar("test_hc_3.cfg")
+        cfg.remove_unit()
+        self.assertFalse(cfg.has_cycle())
+
+        cfg = ContextFreeGrammar("test_hc_4.cfg")
+        cfg.remove_unit()
+        self.assertFalse(cfg.has_cycle())
+
+        cfg = ContextFreeGrammar("test_fnc_1.cfg")
+        self.assertFalse(cfg.has_cycle())
+
+    # def test_firsts(self):
+    #     cfg = ContextFreeGrammar("test_firsts_1.cfg")
+    #     cfg.firsts()
+    #     # cfg.save_to_file("test_firsts_1T.cfg")
+    #     # test_path = os.path.join(CFGS_DIR, "test_firsts_1T.cfg")
+    #     # ref_path = os.path.join(CFGS_DIR, "test_firsts_1A.cfg")
+    #     # self.assertTrue(filecmp.cmp(test_path, ref_path))
+
+    #     cfg = ContextFreeGrammar("test_firsts_2.cfg")
+    #     cfg.firsts()
+
+    # def test_follows(self):
+    #     cfg = ContextFreeGrammar("test_firsts_1.cfg")
+    #     cfg.firsts()
+    #     cfg.follows()
+    #     # cfg.save_to_file("test_firsts_1T.cfg")
+    #     # test_path = os.path.join(CFGS_DIR, "test_firsts_1T.cfg")
+    #     # ref_path = os.path.join(CFGS_DIR, "test_firsts_1A.cfg")
+    #     # self.assertTrue(filecmp.cmp(test_path, ref_path))
+
+    #     cfg = ContextFreeGrammar("test_firsts_2.cfg")
+    #     cfg.firsts()
+    #     cfg.follows()
+
+    # def test_make_table(self):
+    #     cfg = ContextFreeGrammar("test_mt_1.cfg")
+    #     cfg.firsts()
+    #     cfg.follows()
+    #     cfg.make_table()
+
+    # def test_word(self):
+    #     cfg = ContextFreeGrammar("test_mt_1.cfg")
+    #     cfg.firsts()
+    #     cfg.follows()
+    #     cfg.make_table()
+    #     print(cfg.word("ioiai"))
+    #     print(cfg.word("ooi"))
+    #     print(cfg.word(""))
+    #     print(cfg.word("i"))
+    #     print(cfg.word("ia"))
+
+    #     cfg = ContextFreeGrammar("test_mt_2.cfg")
+    #     cfg.firsts()
+    #     cfg.follows()
+    #     cfg.make_table()
+    #     print(cfg.word("cvfbe;"))
 
