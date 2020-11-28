@@ -351,6 +351,13 @@ class TestContextFreeGrammar(unittest.TestCase):
         ref_path = os.path.join(CFGS_DIR, "test_lf_exs_4cA.cfg")
         self.assertTrue(filecmp.cmp(test_path, ref_path))
 
+        cfg = ContextFreeGrammar("test_lf_follow_1.cfg")
+        cfg.left_factoring()
+        cfg.save_to_file("test_lf_follow_1T.cfg")
+        test_path = os.path.join(CFGS_DIR, "test_lf_follow_1T.cfg")
+        ref_path = os.path.join(CFGS_DIR, "test_lf_follow_1A.cfg")
+        self.assertTrue(filecmp.cmp(test_path, ref_path))
+
 
     # def test_firsts(self):
     #     cfg = ContextFreeGrammar("test_firsts_1.cfg")

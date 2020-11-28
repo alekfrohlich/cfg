@@ -327,6 +327,9 @@ class ContextFreeGrammar:
         self.rules = new_rules
 
     def remove_epsilon(self): #ok
+        """
+        TODO: change $
+        """
 
         def power_set(i, cuts):
             if i == len(cuts[0]):
@@ -413,7 +416,7 @@ class ContextFreeGrammar:
             del self.rules[rem]
             self.variables.discard(rem)
 
-        # if empty language
+        # if empty language S -> S
         if self.start not in self.rules.keys():
             self.variables = OrderedSet()
             self.rules = dict()
@@ -791,9 +794,12 @@ class ContextFreeGrammar:
                 self.prod_to_id[(head, body)] = id
                 self.id_to_prod[id] = (head, body)
 
-
     def left_factoring(self):
         """
+        Exceptions
+        --------------
+            1. self has left recursion.
+
         NOTES
         -------------
         I am not considering ndet that produces &, maybe this algorithm works with &
@@ -811,10 +817,21 @@ class ContextFreeGrammar:
         S -> ie | iee | iae
         V -> e | a | &
 
-        F ->
+        S -> alphaVbeta
+        alphaX1beta | alphaXibeta | alphabeta
+
+        alphaS´
+        S -> X1beta | Xibeta | beta
 
         this algorithm does not remove ndet that is inside of a production
         """
+
+        if self.has_left_recursion():
+            print("\n\nGRAMMAR HAS LEFT RECURSION\nNone first has been calculated")
+            print("You need to call remove_left_recursion\n\n")
+            return False
+
+
         firsts_v = dict()
         new_var_id = 0
 
@@ -829,28 +846,23 @@ class ContextFreeGrammar:
                 else:
                     to_add.add(prod_var+prod[1:])
             return to_add
-#S -> Ab | Cv                    S -> ab | db | av |ae
-# A -> a | d
-# C -> a | e
+        #S -> Ab | Cv                    S -> ab | db | av |ae
+        # A -> a | d
+        # C -> a | e
 
         def substitute_ndet_var(ndet_term):
             anyV = True
-            # print("V:::{}".format(v))
             while(anyV):
-                # print("ALO")
                 anyV = False
                 new_rules_v = OrderedSet()
                 to_add = OrderedSet()
                 for prod in self.rules[v]:
-                    # print("FOr")
-                    # print(prod)
                     if prod[0] in self.variables and ndet_term in self.first_body(prod):
                         to_add.update(sub_var(prod))
                         anyV = True
                     else:
                         to_add.add(prod)
                 self.rules[v] = to_add
-                # print(to_add)
 
         def get_largest_common_prefix_2(str1, str2):
             if len(str1) > len(str2):
@@ -862,6 +874,7 @@ class ContextFreeGrammar:
                 if str1[i] != str2[i]:
                     return str1[:i]
             return str1
+
         def get_largest_common_prefix():
             for prod in self.rules[v]:
                 if prod[0] == ndet_term:
@@ -874,7 +887,7 @@ class ContextFreeGrammar:
             # print("lcp::{}".format(lcp))
             return lcp
 
-        def create_new_var_lcp():
+        def create_new_var_lcp(lcp):
             nonlocal new_var_id
             new_rules_old_v = OrderedSet()
             new_var_id = new_var_id+ 1
@@ -886,9 +899,9 @@ class ContextFreeGrammar:
             self.variables.add(new_var)
 
             ll = len(lcp)
+            new_rules_old_v.add(lcp+(new_var,))
             for prod in self.rules[v]:
                 if prod[0] == ndet_term:
-                    new_rules_old_v.add(lcp+(new_var,))
                     if len(prod[ll:]) != 0:
                         self.rules[new_var].add(prod[ll:])
                     else:
@@ -898,54 +911,89 @@ class ContextFreeGrammar:
 
             self.rules[v] = new_rules_old_v
 
+        def first_follow():
+            new_rules_old_v = OrderedSet()
+            to_disc = None
+            for prod in self.rules[v]:
+                lp = len(prod)
+                for i in range(lp-1):
+                    intersection = self.first[prod[i]] & self.first_body(prod[i+1:])
+                    intersection.discard("&")
+                    if "&" in self.first[prod[i]] and len(intersection) != 0:
+                        to_disc = prod
+                        print("prod==={}".format(prod))
+                        for prod_sub in self.rules[prod[i]]:
+                            if prod_sub == ("&", ):
+                                new_rules_old_v.add(prod[:i]+prod[i+1:])
+                            else:
+                                new_rules_old_v.add(prod[:i]+prod_sub+prod[i+1:])
+                        print(new_rules_old_v)
+                        print("\n\n\n===================================\n\n\n")
+                        break
+                if not to_disc is None:
+                    break
+            self.rules[v].discard(to_disc)
+            self.rules[v].update(new_rules_old_v)
+            # print()
+            if not to_disc is None:
+                return True
+            return False
 
+        def first_first():
+            nonlocal ndet_term
+            for prod in self.rules[v]: #choose ndet_term
+                # print(prod)
+                firsts_v[prod] = self.first_body(prod)
+                # print(firsts_v[prod])
 
-        print()
+                for ter in firsts_v[prod]:
+                    if ter != "&":
+                        if ter in total and ndet_term is None:
+                            print("ndet_ter")
+                            print(ter)
+                            ndet_term = ter
+                    total.add(ter)
+
+            if not ndet_term is None:
+                # print("SUb")
+                anynd = True
+                print("\n\nGRAMMAR Normal")
+                print(self)
+                # indirect
+                substitute_ndet_var(ndet_term)
+                print("\n\nGRAMMAR Ind")
+                print(self)
+                # direct
+                lcp = get_largest_common_prefix()
+                create_new_var_lcp(lcp)
+                print("\n\nGRAMMAR Dir")
+                print(self)
+                return True
+            return False
 
         for i in range(20):
             anynd = False
+
             for v in self.variables:
                 self.firsts()
-                # print(v)
                 firsts_v.clear()
-                # self.prod_id()
                 ndet_term = None
-                # ndet_prod = OrderedSet()
                 total = OrderedSet()
 
-                for prod in self.rules[v]: #choose ndet_term
-                    # print(prod)
-                    firsts_v[prod] = self.first_body(prod)
-                    # print(firsts_v[prod])
-
-                    for ter in firsts_v[prod]:
-                        if ter != "&":
-                            if ter in total and ndet_term is None:
-                                print("ndet_ter")
-                                print(ter)
-                                ndet_term = ter
-                        total.add(ter)
-
-                if not ndet_term is None:
-                    # print("SUb")
+                fi_fo = first_follow()
+                if fi_fo:
                     anynd = True
-                    print("\n\nGRAMMAR Normal")
-                    print(self)
-                    # indirect
-                    substitute_ndet_var(ndet_term)
-                    print("\n\nGRAMMAR Ind")
-                    print(self)
-                    # direct
-                    lcp = get_largest_common_prefix()
-                    create_new_var_lcp()
-                    print("\n\nGRAMMAR Dir")
-                    print(self)
                     break
+
+                fi_fi = first_first()
+                if fi_fi:
+                    anynd = True
+                    break
+
             if not anynd:
                 print("Finished in {} step(s)".format(i))
                 return True
         return False
-
 
 BOOTSTRAPPING = True
 SPEC_GRAMMAR = ContextFreeGrammar("spec.cfg")
