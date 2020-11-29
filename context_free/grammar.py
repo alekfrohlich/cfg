@@ -33,6 +33,41 @@ from oset.ordered_set import OrderedSet
 CFGS_DIR = os.path.join(os.path.dirname(__file__), '../cfgs')
 
 
+class Graph:
+    def __init__(self, vertices, edges):
+        self.vertices = vertices
+        self.edges = edges
+
+    def bfs(self, s) -> list:
+        visited = {v:False for v in self.vertices}
+        visited[s] = True
+        q = deque()
+        q.append(s)
+        while len(q) > 0:
+            v = q.pop()
+            for u in self.edges[v]:
+                if not visited[u]:
+                    visited[u] = True
+                    q.append(u)
+        return visited
+
+    def has_loop(self, s) -> bool:
+        """Test whether a vertex can reach itself."""
+        visited = {v:False for v in self.vertices}
+        visited[s] = True
+        q = deque()
+        q.append(s)
+        while len(q) > 0:
+            v = q.pop()
+            for u in self.edges[v]:
+                if u == s:
+                    return True
+                if not visited[u]:
+                    visited[u] = True
+                    q.append(u)
+        return False
+
+
 class ContextFreeGrammar:
     def __init__(self, filename: str):
         """
@@ -174,6 +209,7 @@ class ContextFreeGrammar:
             print("SPECS ALREADY ON")
 
     def has_e(self): # CONST
+        """Tests if the grammar has &-rules that are not in the start symbol."""
         for v in self.variables:
             for prod in self.rules[v]:
                 if v != self.start and prod == ("&",):
@@ -181,36 +217,18 @@ class ContextFreeGrammar:
         return False
 
     def has_cycle(self): # CONST
-        """
-        Notes
-        -----
-            has_cycle is very similar to remove_unit. The only diffetence is that
-            has_cycle does not change the grammar.
-        """
-        def bfs(s):
-            visited[s] = True
-            q = deque()
-            q.append(s)
-            v = s
-            while len(q) > 0:
-                v = q.pop()
-                for u in edges[v]:
-                    if not visited[u]:
-                        visited[u] = True
-                        q.append(u)
-
-        # Add edges between A and B if A => B is a rule in rules
+        # (A, B) is an edge iff A => B is a rule
         edges = {var: OrderedSet() for var in self.variables}
         for head in self.rules.keys(): # FIXME: Tem var sem entrada em rules?
             for body in self.rules[head]:
                 if len(body) == 1 and body[0] in self.variables:
                     edges[head].add(body[0])
 
-        # For every var V, BFS(V) and check if any reached var B goes back to V; i.e., B => V
-        new_rules = {var: OrderedSet() for var in self.variables}
+        graph = Graph(self.variables, edges)
+
+        # Check if some V appears in B = > V, where B was visited by bfs(V)
         for var in self.variables:
-            visited = {va:False for va in self.variables}
-            bfs(var)
+            visited = graph.bfs(var)
             for contender in self.variables:
                 if visited[contender]:
                     for prod in self.rules[contender]:
@@ -283,34 +301,27 @@ class ContextFreeGrammar:
 
         Our algorithm takes care of cyclic productions
         """
-        def bfs(s):
-            visited[s] = True
-            q = deque()
-            q.append(s)
-            v = s
-            while len(q) > 0:
-                v = q.pop()
-                for u in edges[v]:
-                    if not visited[u]:
-                        visited[u] = True
-                        q.append(u)
+        def not_unit(production):
+            return len(production) > 1 or production[0] not in self.variables
 
-        # Add edges between A and B if A => B is a rule in rules
+        # (A, B) is an edge iff A => B is a rule
         edges = {var:OrderedSet() for var in self.variables}
         for head in self.rules.keys(): # FIXME: same trouble as before
             for body in self.rules[head]:
                 if len(body) == 1 and body[0] in self.variables:
                     edges[head].add(body[0])
 
-        # For every var V, BFS(V) and check if any reached var B goes back to V; i.e., B => V
+        graph = Graph(self.variables, edges)
+
+        # Expand all reacheable unit productions
+        # NOTE: Each variable visits itself in bfs
         new_rules = {var:OrderedSet() for var in self.variables}
         for var in self.variables:
-            visited = {va:False for va in self.variables}
-            bfs(var)
+            visited = graph.bfs(var)
             for contender in self.variables:
                 if visited[contender]:
                     for prod in self.rules[contender]:
-                        if len(prod) > 1 or prod[0] not in self.variables:
+                        if not_unit(prod):
                             new_rules[var].add(prod)
         self.rules = new_rules
 
@@ -417,18 +428,6 @@ class ContextFreeGrammar:
         """
         Pre_conditions: None
         """
-        def bfs(s):
-            visited[s] = True
-            q = deque()
-            q.append(s)
-            v = s
-            while len(q) > 0:
-                v = q.pop()
-                for u in edges[v]:
-                    if not visited[u]:
-                        visited[u] = True
-                        q.append(u)
-
         # (A, B) is an edge iff A => alfa and B is in alfa
         # NOTE: doesn't take care of terminals
         edges = {var:OrderedSet() for var in self.variables}
@@ -438,10 +437,11 @@ class ContextFreeGrammar:
                     if symbol in self.variables:
                         edges[head].add(symbol)
 
-        # Remove both variables that were not visited and their rules
+        graph = Graph(self.variables, edges)
+
+        # Remove both the variables that were not visited and their rules
         new_rules = {var:OrderedSet() for var in self.variables}
-        visited = {var:False for var in self.variables}
-        bfs(self.start)
+        visited = graph.bfs(self.start)
         for rem in OrderedSet( [v for v in self.variables if not visited[v]] ):
             del self.rules[rem]
             self.variables.discard(rem)
@@ -557,52 +557,25 @@ class ContextFreeGrammar:
                     break
         return self.first[v]
 
-    def has_left_recursion(self): #ok
-        def bfs(s):
-            visited[s] = True
-            q = deque()
-            q.append(s)
-            v = s
-            while len(q) > 0:
-                v = q.pop()
-                for u in edges[v]:
-                    if u == s:
-                        return True
-                    if not visited[u]:
-                        visited[u] = True
-                        q.append(u)
-            return False
-
-        edges = dict()
-        for v in self.variables:
-            edges[v] = OrderedSet()
+    def has_left_recursion(self): # CONST
+        # (A, B) is an edge iff A => B𝛼 is a rule in rules
+        edges = {v:OrderedSet() for v in self.variables}
         for v in self.variables:
             for prod in self.rules[v]:
-                # print(v)
-                # print(prod)
                 if prod[0] in self.variables:
                     edges[v].add(prod[0])
 
+        graph = Graph(self.variables, edges)
+        return any([graph.has_loop(v) for v in self.variables])
 
-        for v in self.variables:
-            visited = dict()
-            for var in self.variables:
-                visited[var] = False
-            if bfs(v):
-                return True
-
-        return False
-
-    def firsts(self): #ok
+    def firsts(self): # NOT CONST YET
         """
         Exceptions
         --------------
             1. self has left recursion.
         """
         if self.has_left_recursion():
-            print("\n\nGRAMMAR HAS LEFT RECURSION\nNone first has been calculated")
-            print("You need to call remove_left_recursion\n\n")
-            return False
+            raise RuntimeError("A grammar can't contain left recursion in ordered to be left factored.")
 
         self.first["&"] = OrderedSet()
         self.first["&"].add("&")
