@@ -206,7 +206,7 @@ class TestContextFreeGrammar(unittest.TestCase):
 
     def test_fnc(self):
         cfg = ContextFreeGrammar("test_fnc_1.cfg")
-        cfg.fnc()
+        cfg.convert_to_cnf()
         cfg.save_to_file("test_fnc_1T.cfg")
         test_path = os.path.join(CFGS_DIR, "test_fnc_1T.cfg")
         ref_path = os.path.join(CFGS_DIR, "test_fnc_1A.cfg")

@@ -22,7 +22,7 @@ Notes
            Be aware, though, that (x) is not a tuple, but (x,) is.
         2. OrderedSet is used to preserve the order that the productions originally appeared
            on.
-        3. The default dict implementation already preserver order.
+        3. The default dict implementation already preserves order.
 """
 import os
 from collections import deque
@@ -36,27 +36,26 @@ CFGS_DIR = os.path.join(os.path.dirname(__file__), '../cfgs')
 class ContextFreeGrammar:
     def __init__(self, filename: str):
         """
-
         Pre-conditions
         --------------
-            1. filename names a .cfg file inside cfgs/
-            2. The file is a valid grammar according to our context-free grammar specification;
-               c.f., grammar.cfg
-            3. The file contains no white spaces inside syntactical forms # FIXME: wouldn't the grammar capture this already?
-            4. Assumes the grammar has no vars without productions
+            1. filename doesn't name a .cfg file inside cfgs/
+            2. The file is an invalid grammar according to our context-free grammar specification (see spec.cfg)
+            3. Assumes the grammar has no vars without productions # FIXME: really?
 
         Post-conditions
         ---------------
             1. rules is properly tokenized using the three categories: terminal,
-            uppercase-variable, and brackets-variable.
+               uppercase-variable, and brackets-variable.
             2. variables is an OrderedSet with len > 0, where each entry is valid var
-            3. terminals is an OrderedSet, where each entry is a valid term
+            3. terminals is an OrderedSet, where each entry is a valid term (lower-case, len = 1)
             4. rules is a dict where each variable has an OrderedSet entry
             5. start is in variables
+            6. & is not in term
 
         Notes
         -----
-            The first grammar that is read, grammar.cfg, is assumed to be valid; to confirm this, you may run the unit tests.
+            The first grammar that is read, spec.cfg, is assumed to be valid; to confirm this,
+            you may run the unit tests.
         """
 
         filepath = os.path.join(CFGS_DIR, filename)
@@ -67,6 +66,7 @@ class ContextFreeGrammar:
         self.rules = dict()
         self.start = None
 
+        # TODO: remove
         self.first = dict()
         self.follow = dict()
         self.prod_to_id = dict()
@@ -122,15 +122,9 @@ class ContextFreeGrammar:
                             i += 1
                     self.rules[var].add(tuple(tokenized))
                     k += 2
+        self.CHECK_GRAMMAR()
 
-        # Assert post-conditions: 2-5; see test_constructor for 1.
-        assert type(self.variables) == OrderedSet and len(self.variables) > 0 \
-            and all([(v.isupper() and len(v) == 1) or (v[0] == '❬' and v[-1] == '❭' and len(v) > 2) for v in self.variables])
-        assert type(self.terminals) == OrderedSet and all([type(t) == str and not (t.isupper()) for t in self.terminals])
-        assert type(self.rules) == dict and self.rules.keys() == self.variables and all([type(val) == OrderedSet for val in self.rules.values()])
-        assert self.start in self.variables
-
-    def __str__(self) -> str:
+    def __str__(self) -> str: # CONST
         string = ""
 
         first = True
@@ -156,10 +150,21 @@ class ContextFreeGrammar:
             string = string[:-1] + "\n"
         return string
 
-    def save_to_file(self, filename: str):
+    def save_to_file(self, filename: str): # CONST
         filepath = os.path.join(CFGS_DIR, filename)
         with open(filepath, 'w') as f:
             f.write(str(self))
+
+    def CHECK_GRAMMAR(self): # CONST
+        """Temporary method for forcing structure into python."""
+        # Assert post-conditions: 1-6.
+        # NOTE: Nicolas, eu decidi testar tudo sempre pq tem algoritmo que cria producao
+        #1
+        assert type(self.variables) == OrderedSet and len(self.variables) > 0 \
+            and all([(v.isupper() and len(v) == 1) or (v[0] == '❬' and v[-1] == '❭' and len(v) > 2) for v in self.variables])
+        assert type(self.terminals) == OrderedSet and all([(t != '&') and (len(t) == 1) and not (t.isupper()) for t in self.terminals])
+        assert type(self.rules) == dict and self.rules.keys() == self.variables and all([type(val) == OrderedSet for val in self.rules.values()])
+        assert self.start in self.variables
 
     @staticmethod
     def validate_cfg_word(word: str) -> bool:
@@ -168,18 +173,18 @@ class ContextFreeGrammar:
         else:
             print("SPECS ALREADY ON")
 
-    def has_e(self): #ok
+    def has_e(self): # CONST
         for v in self.variables:
             for prod in self.rules[v]:
-                if v != self.start and prod == ("&", ):
+                if v != self.start and prod == ("&",):
                     return True
         return False
 
-    def has_cycle(self): #ok
+    def has_cycle(self): # CONST
         """
         Notes
         -----
-            has_cycle is very similar to remove_unti. The only diffetence is that
+            has_cycle is very similar to remove_unit. The only diffetence is that
             has_cycle does not change the grammar.
         """
         def bfs(s):
@@ -194,23 +199,17 @@ class ContextFreeGrammar:
                         visited[u] = True
                         q.append(u)
 
-        edges = dict()
-        for var in self.variables:
-            edges[var] = OrderedSet()
+        # Add edges between A and B if A => B is a rule in rules
+        edges = {var: OrderedSet() for var in self.variables}
+        for head in self.rules.keys(): # FIXME: Tem var sem entrada em rules?
+            for body in self.rules[head]:
+                if len(body) == 1 and body[0] in self.variables:
+                    edges[head].add(body[0])
 
-        for h in self.variables:
-            if h in self.rules.keys():
-                for b in self.rules[h]:
-                    if len(b) == 1 and b[0] in self.variables:
-                        edges[h].add(b[0])
-        new_rules = dict()
+        # For every var V, BFS(V) and check if any reached var B goes back to V; i.e., B => V
+        new_rules = {var: OrderedSet() for var in self.variables}
         for var in self.variables:
-            new_rules[var] = OrderedSet()
-
-        for var in self.variables:
-            visited = dict()
-            for va in self.variables:
-                visited[va] = False
+            visited = {va:False for va in self.variables}
             bfs(var)
             for contender in self.variables:
                 if visited[contender]:
@@ -219,7 +218,7 @@ class ContextFreeGrammar:
                             return True
         return False
 
-    def remove_left_recursion(self): #ok
+    def remove_left_recursion(self): # NOT CONST
         """
         Exceptions
         --------------
@@ -234,18 +233,13 @@ class ContextFreeGrammar:
 
         """
         if self.has_e():
-            print("\n\nGRAMMAR IS NOT &-free\n& has not been removed")
-            print("You need to call remove_epsilon\n\n")
-            return False
+            raise RuntimeError("A grammar must be &-free in order to remove left recursions.")
 
         if self.has_cycle():
-            print("\n\nGRAMMAR IS NOT cycle-free\nCyclical productions have not been removed")
-            print("You need to call remove_unit")
-            print("Note that remove_unit will remove cyclical productions and unit productions\n\n")
-            return False
+            raise RuntimeError("A grammar must be cycle-free in order to remove left recursions.")
 
         # Remove indirect
-        for i in range(len(self.variables)):
+        for i in range(len(self.variables)): # FIXME: now over var insead of rules.keys()?
             direct = False
             for j in range(i):
                 to_remove = set()
@@ -277,17 +271,17 @@ class ContextFreeGrammar:
                 self.rules[self.variables[i]] = new_prods_i
                 self.rules[new_var].add(('&',))
 
-    def remove_unit(self): #ok
+    def remove_unit(self): # NOT CONST
         """
         Post-conditions: may return variable with no production
 
         Note:
-        In this algorithm cyclical productions will be eliminated.
+        In this algorithm cyclic productions will be eliminated.
         A -> B                          A ->
         B -> C         -------->        B ->
         C -> A                          C ->
 
-        Our algorithm takes care of cyclical productions
+        Our algorithm takes care of cyclic productions
         """
         def bfs(s):
             visited[s] = True
@@ -301,23 +295,17 @@ class ContextFreeGrammar:
                         visited[u] = True
                         q.append(u)
 
-        edges = dict()
-        for var in self.variables:
-            edges[var] = OrderedSet()
+        # Add edges between A and B if A => B is a rule in rules
+        edges = {var:OrderedSet() for var in self.variables}
+        for head in self.rules.keys(): # FIXME: same trouble as before
+            for body in self.rules[head]:
+                if len(body) == 1 and body[0] in self.variables:
+                    edges[head].add(body[0])
 
-        for h in self.variables:
-            if h in self.rules.keys():
-                for b in self.rules[h]:
-                    if len(b) == 1 and b[0] in self.variables:
-                        edges[h].add(b[0])
-        new_rules = dict()
+        # For every var V, BFS(V) and check if any reached var B goes back to V; i.e., B => V
+        new_rules = {var:OrderedSet() for var in self.variables}
         for var in self.variables:
-            new_rules[var] = OrderedSet()
-
-        for var in self.variables:
-            visited = dict()
-            for va in self.variables:
-                visited[va] = False
+            visited = {va:False for va in self.variables}
             bfs(var)
             for contender in self.variables:
                 if visited[contender]:
@@ -326,18 +314,17 @@ class ContextFreeGrammar:
                             new_rules[var].add(prod)
         self.rules = new_rules
 
-    def remove_epsilon(self): #ok
-        """
-        TODO: change $
-        """
-
+    def remove_epsilon(self): # NOT CONST
         def power_set(i, cuts):
+            """Return the all possible cuts obtained by striking out a subset
+               of the nullable variables in the given production.
+            """
             if i == len(cuts[0]):
                 new_ps = OrderedSet()
                 for c in cuts:
                     new_c = tuple()
                     for c2 in c:
-                        if c2 != "$":
+                        if c2 != "ε":
                             new_c += (c2,)
                     if len(new_c) > 0:
                         new_ps.add(new_c)
@@ -346,13 +333,14 @@ class ContextFreeGrammar:
             if cuts[0][i] in nullables:
                 to_add = OrderedSet()
                 for s in cuts:
-                    to_add.add(s[:i] + ("$",) + s[i+1:])
+                    to_add.add(s[:i] + ("ε",) + s[i+1:])
                 cuts.update(to_add)
             return power_set(i+1, cuts)
 
         nullables = OrderedSet()
         nullables.add("&")
 
+        # Find nullables through Hopcroft's algorithm
         changed = True
         while changed:
             changed = False
@@ -362,6 +350,7 @@ class ContextFreeGrammar:
                         nullables.add(var)
                         changed = True
 
+        # Strike out nullables
         for var in self.variables:
             to_add = OrderedSet()
             for prod in self.rules[var]:
@@ -375,13 +364,13 @@ class ContextFreeGrammar:
             self.rules["❬'{}❭".format(self.start)] = OrderedSet([(self.start, ), ("&", )])
             self.start = "❬'{}❭".format(self.start)
 
-    def remove_unproductives(self): #ok
+    def remove_unproductives(self): # NOT CONST
         """
-        Notes:
-
-        If the grammar generates no words (empty language) then the grammar returned will be
-            start_symbol -> start_symbol
-        and it will keep its terminals.
+        Notes
+        -----
+            If the grammar generates no words (empty language), then the grammar returned will be
+                start_symbol -> start_symbol
+            and it will keep its terminals.
         """
         productives = OrderedSet()
         for t in self.terminals:
@@ -424,7 +413,7 @@ class ContextFreeGrammar:
             self.rules[self.start] = OrderedSet()
             self.rules[self.start].add(self.start)
 
-    def remove_unreachables(self): #ok
+    def remove_unreachables(self): # NOT CONST
         """
         Pre_conditions: None
         """
@@ -440,42 +429,30 @@ class ContextFreeGrammar:
                         visited[u] = True
                         q.append(u)
 
-        edges = dict()
-        for var in self.variables:
-            edges[var] = OrderedSet()
+        # (A, B) is an edge iff A => alfa and B is in alfa
+        # NOTE: doesn't take care of terminals
+        edges = {var:OrderedSet() for var in self.variables}
+        for head in self.rules.keys(): # FIXME: Same
+            for body in self.rules[head]:
+                for symbol in body:
+                    if symbol in self.variables:
+                        edges[head].add(symbol)
 
-        for h in self.variables:
-            if h in self.rules.keys():
-                for b in self.rules[h]:
-                    for symbol in b:
-                        if symbol in self.variables:
-                            edges[h].add(symbol)
-        new_rules = dict()
-        for var in self.variables:
-            new_rules[var] = OrderedSet()
-
-        visited = dict()
-        for va in self.variables:
-                visited[va] = False
+        # Remove both variables that were not visited and their rules
+        new_rules = {var:OrderedSet() for var in self.variables}
+        visited = {var:False for var in self.variables}
         bfs(self.start)
-
-
-        to_remove = OrderedSet()
-        for v in self.variables:
-            if not visited[v]:
-                to_remove.add(v)
-
-        for rem in to_remove:
+        for rem in OrderedSet( [v for v in self.variables if not visited[v]] ):
             del self.rules[rem]
             self.variables.discard(rem)
 
-    def replace_terminals(self): #ok
+    def replace_terminals(self): # NOT CONST, nao li ainda
         """
         Pre_conditions: None
         """
         new_v_id = 0
 
-        #var_to_terminal checks if variable already exists or if variable has already been created
+        # var_to_terminal checks if variable already exists or if variable has already been created
         # var_to_terminal does not consider already duplicated variables
         def var_to_terminal(sym):
             var = None
@@ -505,13 +482,12 @@ class ContextFreeGrammar:
             to_add = OrderedSet()
             for prod in self.rules[v]:
                 old_prod = list(prod)
-                if(len(old_prod) >= 2):
+                if (len(old_prod) >= 2):
                     for i in range(len(old_prod)):
                         symbol = old_prod[i]
                         if symbol in self.terminals:
                             new_v = var_to_terminal(symbol)
                             if new_v is None:
-                                # print("oi")
                                 new_v = create_new_v(symbol)
                             for j in range(i, len(old_prod)):
                                 if old_prod[j] == symbol:
@@ -521,12 +497,9 @@ class ContextFreeGrammar:
 
         self.rules = new_rules
         for v in to_add_var:
-            # print(v)
             self.variables.add(v)
 
-        # print(self.variables)
-
-    def reduce_size(self): #ok
+    def reduce_size(self): # NOT CONST, nao li ainda
         # reduce_size does not check if new_v was already in the grammar
 
         new_rules = dict()
@@ -561,7 +534,7 @@ class ContextFreeGrammar:
         for v in to_add_var:
             self.variables.add(v)
 
-    def fnc(self): #ok
+    def convert_to_cnf(self): # NOT CONST
         self.remove_epsilon()
         self.remove_unit()
         self.remove_unproductives()
@@ -655,8 +628,8 @@ class ContextFreeGrammar:
         lb = len(body)
 
         total = OrderedSet()
-        for b in body:
-            to_add = self.first[b]
+        for body in body:
+            to_add = self.first[body]
             total.update(to_add)
             if "&" not in to_add:
                 total.discard("&")
@@ -737,20 +710,6 @@ class ContextFreeGrammar:
                         if self.table[(v, f)] != -1:
                             print("\n\n\nNOT LEFT-FACTORED\nYou need to use the method remove_left_recursion\n\n\n")
                         self.table[(v, f)] = self.prod_to_id[(v, alpha)]
-
-        # for t in self.terminals:
-        #     print("{} ".format(t), end="")
-        # print("$")
-
-        # for head, bodies in self.rules.items():
-        #     for body in bodies:
-        #         print("head:{}   body:{}     id:{}", head, body, self.prod_to_id[(head,body)])
-
-        # for v in self.variables:
-        #     print("{}:: ".format(v), end="")
-        #     for t in self.terminals:
-        #         print("{} ".format(self.table[(v, t)]), end="")
-        #     print("{}".format(self.table[(v, "$")]))
 
     def word(self, w): #ok
         """
@@ -846,9 +805,6 @@ class ContextFreeGrammar:
                 else:
                     to_add.add(prod_var+prod[1:])
             return to_add
-        #S -> Ab | Cv                    S -> ab | db | av |ae
-        # A -> a | d
-        # C -> a | e
 
         def substitute_ndet_var(ndet_term):
             anyV = True
