@@ -103,14 +103,10 @@ class ContextFreeGrammar:
         self.rules = dict()
         self.start = None
 
-        # TODO: REMOVE
-        # self.prod_to_id = dict()
-        # self.id_to_prod = dict()
-        # self.table = dict()
-
         with open(filepath, 'r') as f:
-            # ContextFreeGrammar.validate_cfg_word(f.read())
-            lines = f.read().split("\n")
+            file_read = f.read()
+            ContextFreeGrammar.validate_cfg_word(file_read)
+            lines = file_read.split("\n")
 
             for line in lines:
                 if line == lines[-1]:
@@ -192,9 +188,9 @@ class ContextFreeGrammar:
 
     def CHECK_GRAMMAR(self): # CONST
         """Temporary method for forcing structure into python."""
-        # Assert post-conditions: 1-6.
+        # Assert post-conditions: 2-6.
         # NOTE: Nicolas, eu decidi testar tudo sempre pq tem algoritmo que cria producao
-        #1
+        #       Alem disso, tb assumi que (1) já é bem testado pelos testes
         assert type(self.variables) == OrderedSet and len(self.variables) > 0 \
             and all([(v.isupper() and len(v) == 1) or (v[0] == '❬' and v[-1] == '❭' and len(v) > 2) for v in self.variables])
         assert type(self.terminals) == OrderedSet and all([(t != '&') and (len(t) == 1) and not (t.isupper()) for t in self.terminals])
@@ -203,9 +199,7 @@ class ContextFreeGrammar:
 
     @staticmethod
     def validate_cfg_word(word: str) -> bool:
-        if BOOTSTRAPPING:
-            print("BOOOT")
-        else:
+        if VERIFY_GRAMMAR:
             print("SPECS ALREADY ON")
 
     def has_e(self): # CONST
@@ -288,6 +282,7 @@ class ContextFreeGrammar:
 
                 self.rules[self.variables[i]] = new_prods_i
                 self.rules[new_var].add(('&',))
+        self.CHECK_GRAMMAR()
 
     def remove_unit(self): # NOT CONST
         """
@@ -324,6 +319,7 @@ class ContextFreeGrammar:
                         if not_unit(prod):
                             new_rules[var].add(prod)
         self.rules = new_rules
+        self.CHECK_GRAMMAR()
 
     def remove_epsilon(self): # NOT CONST
         def power_set(i, cuts):
@@ -374,6 +370,7 @@ class ContextFreeGrammar:
             self.variables.add("❬'{}❭".format(self.start))
             self.rules["❬'{}❭".format(self.start)] = OrderedSet([(self.start, ), ("&", )])
             self.start = "❬'{}❭".format(self.start)
+        self.CHECK_GRAMMAR()
 
     def remove_unproductives(self): # NOT CONST
         """
@@ -423,6 +420,7 @@ class ContextFreeGrammar:
             self.variables.add(self.start)
             self.rules[self.start] = OrderedSet()
             self.rules[self.start].add(self.start)
+        self.CHECK_GRAMMAR()
 
     def remove_unreachables(self): # NOT CONST
         """
@@ -445,6 +443,7 @@ class ContextFreeGrammar:
         for rem in OrderedSet( [v for v in self.variables if not visited[v]] ):
             del self.rules[rem]
             self.variables.discard(rem)
+        self.CHECK_GRAMMAR()
 
     def replace_terminals(self): # NOT CONST, nao li ainda
         """
@@ -498,6 +497,7 @@ class ContextFreeGrammar:
         self.rules = new_rules
         for v in to_add_var:
             self.variables.add(v)
+        self.CHECK_GRAMMAR()
 
     def reduce_size(self): # NOT CONST, nao li ainda
         # reduce_size does not check if new_v was already in the grammar
@@ -533,6 +533,7 @@ class ContextFreeGrammar:
         self.rules = new_rules
         for v in to_add_var:
             self.variables.add(v)
+        self.CHECK_GRAMMAR()
 
     def convert_to_cnf(self): # NOT CONST
         self.remove_epsilon()
@@ -654,13 +655,13 @@ class ContextFreeGrammar:
                 # If alpha = &, then skip the loop
                 for f in first_alpha - {'&'}:
                     if (v, f) in table.keys():
-                        raise RuntimeError("First/First conflict.")
+                        raise RuntimeError("First/First conflict at {}".format((v, f)))
                     else:
                         table[(v, f)] = ''.join(alpha)
                 if "&" in first_alpha:
                     for f in follows[v]:
                         if (v, f) in table.keys():
-                            raise RuntimeError("First/Follow conflict.")
+                            raise RuntimeError("First/Follow conflict at {}".format(v, f))
                         else:
                             table[(v, f)] = ''.join(alpha)
         return table
@@ -669,36 +670,11 @@ class ContextFreeGrammar:
         """Build LL(1) Predictive Parser for this grammar."""
         return PredictiveParser(self.make_LL1_table())
 
-    def left_factoring(self):
+    def left_factoring(self): # NOT CONST
         """
         Exceptions
         --------------
             1. self has left recursion.
-
-        NOTES
-        -------------
-        I am not considering ndet that produces &, maybe this algorithm works with &
-        but I do not know it yet
-        example:
-        S -> A | &
-        A -> &
-
-        S -> a | B
-        B -> a
-
-        S -> iVe
-        V -> e | a | &
-
-        S -> ie | iee | iae
-        V -> e | a | &
-
-        S -> alphaVbeta
-        alphaX1beta | alphaXibeta | alphabeta
-
-        alphaS´
-        S -> X1beta | Xibeta | beta
-
-        this algorithm does not remove ndet that is inside of a production
         """
 
         if self.has_left_recursion():
@@ -845,7 +821,6 @@ class ContextFreeGrammar:
             anynd = False
 
             for v in self.variables:
-                self.firsts()
                 firsts_v.clear()
                 ndet_term = None
                 total = OrderedSet()
@@ -863,8 +838,12 @@ class ContextFreeGrammar:
             if not anynd:
                 print("Finished in {} step(s)".format(i))
                 return True
+        self.CHECK_GRAMMAR()
         return False
 
-BOOTSTRAPPING = True
+VERIFY_GRAMMAR = False
 SPEC_GRAMMAR = ContextFreeGrammar("spec.cfg")
-BOOTSTRAPPING = False
+SPEC_GRAMMAR.left_factoring()
+SPEC_PARSER = SPEC_GRAMMAR.make_LL1_parser()
+print(SPEC_PARSER)
+VERIFY_GRAMMAR = True
