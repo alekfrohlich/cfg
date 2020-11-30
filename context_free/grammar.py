@@ -610,6 +610,7 @@ class ContextFreeGrammar:
             add = False
             for head, bodies in self.rules.items():
                 for body in bodies:
+                    # Add FIRSTS
                     lb = len(body)
                     for i in range(lb-1):
                         if body[i] in self.variables:
@@ -618,6 +619,7 @@ class ContextFreeGrammar:
                             if not (to_add <= follow[body[i]]):
                                 add = True
                                 follow[body[i]].update(to_add)
+                    # Add FOLLOWS
                     to_add = follow[head]
                     to_add.discard("&")
                     for i in range(lb-1, -1, -1):

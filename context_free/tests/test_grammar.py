@@ -237,14 +237,14 @@ class TestContextFreeGrammar(unittest.TestCase):
         cfg = ContextFreeGrammar("test_rlr_exs_3bA.cfg")
         self.assertFalse(cfg.has_left_recursion())
 
-        cfg = ContextFreeGrammar("test_firsts_1.cfg")
+        cfg = ContextFreeGrammar("test_ll1_1.cfg")
         self.assertFalse(cfg.has_left_recursion())
 
-        cfg = ContextFreeGrammar("test_firsts_2.cfg")
+        cfg = ContextFreeGrammar("test_ll1_2.cfg")
         self.assertFalse(cfg.has_left_recursion())
 
-        # cfg = ContextFreeGrammar("test_firsts_3.cfg")
-        # self.assertFalse(cfg.has_left_recursion())
+        cfg = ContextFreeGrammar("test_ll1_3.cfg")
+        self.assertFalse(cfg.has_left_recursion())
 
     def test_he(self):
         cfg = ContextFreeGrammar("test_re_1.cfg")
@@ -362,26 +362,6 @@ class TestContextFreeGrammar(unittest.TestCase):
 
 
     def test_firsts(self):
-        cfg = ContextFreeGrammar("test_firsts_1.cfg")
-        firsts = {t:OrderedSet([t]) for t in OrderedSet(['&']) | cfg.terminals}
-        # NOTE: dict equality doesn't consider its order
-        firsts.update({
-            'A':OrderedSet(['a', '&']),
-            'B':OrderedSet(['b', 'a', 'd', '&']),
-            'S':OrderedSet(['a', 'b', 'd', 'c']),
-        })
-        self.assertEqual(firsts, cfg.firsts())
-
-        cfg = ContextFreeGrammar("test_firsts_2.cfg")
-        firsts = {t:OrderedSet([t]) for t in OrderedSet(['&']) | cfg.terminals}
-        firsts.update({
-            'S':OrderedSet(['a', 'b', 'c', 'd']),
-            'A':OrderedSet(['a', '&'          ]),
-            'B':OrderedSet(['b', 'a', 'c', 'd']),
-            'C':OrderedSet(['c', '&'          ]),
-        })
-        self.assertEqual(firsts, cfg.firsts())
-
         cfg = ContextFreeGrammar("test_ll1_1.cfg")
         firsts = {t:OrderedSet([t]) for t in OrderedSet(['&']) | cfg.terminals}
         firsts.update({
@@ -393,13 +373,53 @@ class TestContextFreeGrammar(unittest.TestCase):
         })
         self.assertEqual(firsts, cfg.firsts())
 
-    # def test_follows(self):
-    #     cfg = ContextFreeGrammar("test_firsts_1.cfg")
-    #     cfg.follows()
+        cfg = ContextFreeGrammar("test_ll1_2.cfg")
+        firsts = {t:OrderedSet([t]) for t in OrderedSet(['&']) | cfg.terminals}
+        # NOTE: dict equality doesn't consider its order
+        firsts.update({
+            'A':OrderedSet(['a', '&']),
+            'B':OrderedSet(['b', 'a', 'd', '&']),
+            'S':OrderedSet(['a', 'b', 'd', 'c']),
+        })
+        self.assertEqual(firsts, cfg.firsts())
 
-    #     cfg = ContextFreeGrammar("test_firsts_2.cfg")
-    #     cfg.firsts()
-    #     cfg.follows()
+        cfg = ContextFreeGrammar("test_ll1_3.cfg")
+        firsts = {t:OrderedSet([t]) for t in OrderedSet(['&']) | cfg.terminals}
+        firsts.update({
+            'S':OrderedSet(['a', 'b', 'c', 'd']),
+            'A':OrderedSet(['a', '&'          ]),
+            'B':OrderedSet(['b', 'a', 'c', 'd']),
+            'C':OrderedSet(['c', '&'          ]),
+        })
+        self.assertEqual(firsts, cfg.firsts())
+
+    def test_follows(self):
+        cfg = ContextFreeGrammar("test_ll1_1.cfg")
+        follows = {
+            'P': OrderedSet(['$', ';']),
+            'K': OrderedSet(['v', 'f', 'b', 'c', '$', ';']),
+            'V': OrderedSet(['b', 'c', '$', 'e', ';']),
+            'F': OrderedSet(['b', 'c', '$', 'e', ';']),
+            'C': OrderedSet(['$', 'e', ';']),
+        }
+        self.assertEqual(follows, cfg.follows())
+
+        cfg = ContextFreeGrammar("test_ll1_2.cfg")
+        follows = {
+            'S':OrderedSet(['$']),
+            'B':OrderedSet(['c']),
+            'A':OrderedSet(['b', 'a', 'd', 'c']),
+        }
+        self.assertEqual(follows, cfg.follows())
+
+        cfg = ContextFreeGrammar("test_ll1_3.cfg")
+        follows = {
+            'S':OrderedSet(['$']),
+            'A':OrderedSet(['b', 'a', 'c', 'd']),
+            'B':OrderedSet(['c', '$']),
+            'C':OrderedSet(['$', 'd']),
+        }
+        self.assertEqual(follows, cfg.follows())
 
     # def test_make_table(self):
     #     cfg = ContextFreeGrammar("test_mt_1.cfg")
