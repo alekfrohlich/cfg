@@ -657,13 +657,13 @@ class ContextFreeGrammar:
                     if (v, f) in table.keys():
                         raise RuntimeError("First/First conflict at {}".format((v, f)))
                     else:
-                        table[(v, f)] = ''.join(alpha)
+                        table[(v, f)] = alpha
                 if "&" in first_alpha:
                     for f in follows[v]:
                         if (v, f) in table.keys():
                             raise RuntimeError("First/Follow conflict at {}".format(v, f))
                         else:
-                            table[(v, f)] = ''.join(alpha)
+                            table[(v, f)] = alpha
         return table
 
     def make_LL1_parser(self) -> PredictiveParser: # CONST
@@ -843,7 +843,6 @@ class ContextFreeGrammar:
 
 VERIFY_GRAMMAR = False
 SPEC_GRAMMAR = ContextFreeGrammar("spec.cfg")
-SPEC_GRAMMAR.left_factoring()
 SPEC_PARSER = SPEC_GRAMMAR.make_LL1_parser()
 print(SPEC_PARSER)
 VERIFY_GRAMMAR = True

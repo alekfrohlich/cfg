@@ -38,7 +38,7 @@ class PredictiveParser:
 
             for t in self.terminals:
                 try:
-                    string += "{}|".format(format_string(self.table[(v, t)]))
+                    string += "{}|".format(format_string(''.join(self.table[(v, t)])))
                 except KeyError:
                     string += "{}|".format(format_string("None"))
         string += "\n{}".format("=" * row_size)
@@ -75,6 +75,6 @@ class PredictiveParser:
                 else:
                     action = self.table[(stack[-1], s)]
                     stack.pop()
-                    if action != "&":
+                    if action != ("&",):
                         for c in reversed(action):
                             stack.append(c)
