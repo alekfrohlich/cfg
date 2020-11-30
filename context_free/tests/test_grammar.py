@@ -243,6 +243,9 @@ class TestContextFreeGrammar(unittest.TestCase):
         cfg = ContextFreeGrammar("test_firsts_2.cfg")
         self.assertFalse(cfg.has_left_recursion())
 
+        # cfg = ContextFreeGrammar("test_firsts_3.cfg")
+        # self.assertFalse(cfg.has_left_recursion())
+
     def test_he(self):
         cfg = ContextFreeGrammar("test_re_1.cfg")
         self.assertTrue(cfg.has_e())
@@ -308,7 +311,6 @@ class TestContextFreeGrammar(unittest.TestCase):
         cfg = ContextFreeGrammar("test_fnc_1.cfg")
         self.assertFalse(cfg.has_cycle())
 
-
     def test_lf(self):
         cfg = ContextFreeGrammar("test_lf_1.cfg")
         cfg.left_factoring()
@@ -359,25 +361,41 @@ class TestContextFreeGrammar(unittest.TestCase):
         self.assertTrue(filecmp.cmp(test_path, ref_path))
 
 
-    # def test_firsts(self):
-    #     cfg = ContextFreeGrammar("test_firsts_1.cfg")
-    #     cfg.firsts()
-    #     # cfg.save_to_file("test_firsts_1T.cfg")
-    #     # test_path = os.path.join(CFGS_DIR, "test_firsts_1T.cfg")
-    #     # ref_path = os.path.join(CFGS_DIR, "test_firsts_1A.cfg")
-    #     # self.assertTrue(filecmp.cmp(test_path, ref_path))
+    def test_firsts(self):
+        cfg = ContextFreeGrammar("test_firsts_1.cfg")
+        firsts = {t:OrderedSet([t]) for t in OrderedSet(['&']) | cfg.terminals}
+        # NOTE: dict equality doesn't consider its order
+        firsts.update({
+            'A':OrderedSet(['a', '&']),
+            'B':OrderedSet(['b', 'a', 'd', '&']),
+            'S':OrderedSet(['a', 'b', 'd', 'c']),
+        })
+        self.assertEqual(firsts, cfg.firsts())
 
-    #     cfg = ContextFreeGrammar("test_firsts_2.cfg")
-    #     cfg.firsts()
+        cfg = ContextFreeGrammar("test_firsts_2.cfg")
+        firsts = {t:OrderedSet([t]) for t in OrderedSet(['&']) | cfg.terminals}
+        firsts.update({
+            'S':OrderedSet(['a', 'b', 'c', 'd']),
+            'A':OrderedSet(['a', '&'          ]),
+            'B':OrderedSet(['b', 'a', 'c', 'd']),
+            'C':OrderedSet(['c', '&'          ]),
+        })
+        self.assertEqual(firsts, cfg.firsts())
+
+        cfg = ContextFreeGrammar("test_ll1_1.cfg")
+        firsts = {t:OrderedSet([t]) for t in OrderedSet(['&']) | cfg.terminals}
+        firsts.update({
+            'P': OrderedSet(['c', '&', 'v', 'f', 'b']),
+            'K': OrderedSet(['c', '&']),
+            'V': OrderedSet(['v', 'f', '&']),
+            'F': OrderedSet(['f', '&']),
+            'C': OrderedSet(['b', 'c', '&']),
+        })
+        self.assertEqual(firsts, cfg.firsts())
 
     # def test_follows(self):
     #     cfg = ContextFreeGrammar("test_firsts_1.cfg")
-    #     cfg.firsts()
     #     cfg.follows()
-    #     # cfg.save_to_file("test_firsts_1T.cfg")
-    #     # test_path = os.path.join(CFGS_DIR, "test_firsts_1T.cfg")
-    #     # ref_path = os.path.join(CFGS_DIR, "test_firsts_1A.cfg")
-    #     # self.assertTrue(filecmp.cmp(test_path, ref_path))
 
     #     cfg = ContextFreeGrammar("test_firsts_2.cfg")
     #     cfg.firsts()

@@ -29,6 +29,8 @@ from collections import deque
 
 from oset.ordered_set import OrderedSet
 
+from .parser import PredictiveParser
+
 
 CFGS_DIR = os.path.join(os.path.dirname(__file__), '../cfgs')
 
@@ -101,9 +103,7 @@ class ContextFreeGrammar:
         self.rules = dict()
         self.start = None
 
-        # TODO: remove
-        self.first = dict()
-        self.follow = dict()
+        # TODO: REMOVE
         self.prod_to_id = dict()
         self.id_to_prod = dict()
         self.table = dict()
@@ -542,21 +542,6 @@ class ContextFreeGrammar:
         self.replace_terminals()
         self.reduce_size()
 
-    def first_var(self, v): #ok
-        # first_var calculates first(v) using DP
-        # DP is not used to calculate the first of a sentence
-        if len(self.first[v]) != 0:
-            return self.first[v]
-
-        for prod in self.rules[v]:
-            for p in prod:
-                to_add = self.first_var(p)
-                self.first[v].update(to_add)
-                if "&" not in to_add:
-                    self.first[v].discard("&")
-                    break
-        return self.first[v]
-
     def has_left_recursion(self): # CONST
         # (A, B) is an edge iff A => B𝛼 is a rule in rules
         edges = {v:OrderedSet() for v in self.variables}
@@ -568,57 +553,58 @@ class ContextFreeGrammar:
         graph = Graph(self.variables, edges)
         return any([graph.has_loop(v) for v in self.variables])
 
-    def firsts(self): # NOT CONST YET
+    def firsts(self): # CONST
         """
         Exceptions
         --------------
-            1. self has left recursion.
+            1. The grammar has left recursion.
         """
+        def first_var(v):
+            """Calculate the first of a variable using Dynamic Programming."""
+            if len(first[v]) != 0:
+                return first[v]
+
+            for prod in self.rules[v]:
+                for p in prod:
+                    to_add = first_var(p)
+                    first[v].update(to_add)
+                    # Stop when Xi doesn't have epsilon in its first
+                    if "&" not in to_add:
+                        first[v].discard("&")
+                        break
+            return first[v]
+
         if self.has_left_recursion():
-            raise RuntimeError("A grammar can't contain left recursion in ordered to be left factored.")
+            raise RuntimeError("A grammar can't contain left recursion in ordered to calculate FIRSTS.")
 
-        self.first["&"] = OrderedSet()
-        self.first["&"].add("&")
-        for t in self.terminals:
-            self.first[t] = OrderedSet()
-            self.first[t].add(t)
-        for v in self.variables:
-            self.first[v] = OrderedSet()
+        first = {t:OrderedSet([t]) for t in OrderedSet(['&']) | self.terminals}
+        first.update({v:OrderedSet() for v in self.variables})
 
         for v in self.variables:
-            self.first_var(v)
+            first_var(v)
+        return first
 
-    def first_body(self, body): #ok
-        """
-        Pre-conditions
-        --------------
-            1. self.first() has already been called.
-
-        NOTES
-        -------------
-        first_body calculates the first of a sentence
-        """
+    def first_body(self, body, first=None): # CONST
+        """Calculate the first of a syntactical form."""
         lb = len(body)
+        if first is None:
+            first = self.firsts()
 
         total = OrderedSet()
         for body in body:
-            to_add = self.first[body]
+            to_add = first[body]
             total.update(to_add)
             if "&" not in to_add:
                 total.discard("&")
                 break
         return total
 
-    def follows(self): #ok
-        """
-        Pre-conditions
-        --------------
-            1. self.first() has already been called.
-        """
-        for v in self.variables:
-            self.follow[v] = OrderedSet()
+    def follows(self): # CONST
+        """Compute the follows."""
+        first = self.firsts()
+        follow = {v:OrderedSet() for v in self.variables}
 
-        self.follow[self.start].add("$")
+        follow[self.start].add("$")
         add = True
         while(add):
             add = False
@@ -627,36 +613,35 @@ class ContextFreeGrammar:
                     lb = len(body)
                     for i in range(lb-1):
                         if body[i] in self.variables:
-                            to_add = self.first_body(body[i+1:])
+                            to_add = self.first_body(body[i+1:], first)
                             to_add.discard("&")
-                            if not to_add.issubset(self.follow[body[i]]):
+                            if not (to_add <= follow[body[i]]):
                                 add = True
-                                self.follow[body[i]].update(to_add)
-                    to_add = self.follow[head]
+                                follow[body[i]].update(to_add)
+                    to_add = follow[head]
                     to_add.discard("&")
                     for i in range(lb-1, -1, -1):
                         if body[i] in self.variables:
-                            if not to_add.issubset(self.follow[body[i]]):
+                            if not to_add.issubset(follow[body[i]]):
                                 add = True
-                                self.follow[body[i]].update(to_add)
-                            if "&" not in self.first[body[i]]:
+                                follow[body[i]].update(to_add)
+                            if "&" not in first[body[i]]:
                                 break
                         else:
                             break
+        return follow
 
-    def make_table(self): #ok
+    def make_table(self) -> PredictiveParser: # CONST
         """
         Pre-conditions
         --------------
             1. self does not have left recursion.
-            2. self.firsts() has already been called.
-            3. self.follows() has already been called.
 
         Exceptions
         --------------
             1. self is not left-factored.
         """
-
+        cached_first = self.first()
         id = 0
         for head, bodies in self.rules.items():
             for body in bodies:
@@ -672,7 +657,7 @@ class ContextFreeGrammar:
 
         for v in self.variables:
             for alpha in self.rules[v]:
-                first = self.first_body(alpha)
+                first = self.first_body(alpha, cached_first)
                 for f in first:
                     if f != "&":
                         if self.table[(v, f)] != -1:
@@ -759,11 +744,9 @@ class ContextFreeGrammar:
         """
 
         if self.has_left_recursion():
-            print("\n\nGRAMMAR HAS LEFT RECURSION\nNone first has been calculated")
-            print("You need to call remove_left_recursion\n\n")
-            return False
+            raise RuntimeError("A grammar can't have left recursion in ordered to be factored")
 
-
+        cached_first = self.firsts()
         firsts_v = dict()
         new_var_id = 0
 
@@ -786,7 +769,7 @@ class ContextFreeGrammar:
                 new_rules_v = OrderedSet()
                 to_add = OrderedSet()
                 for prod in self.rules[v]:
-                    if prod[0] in self.variables and ndet_term in self.first_body(prod):
+                    if prod[0] in self.variables and ndet_term in self.first_body(prod): # NOTE: CANT CACHE
                         to_add.update(sub_var(prod))
                         anyV = True
                     else:
@@ -846,9 +829,9 @@ class ContextFreeGrammar:
             for prod in self.rules[v]:
                 lp = len(prod)
                 for i in range(lp-1):
-                    intersection = self.first[prod[i]] & self.first_body(prod[i+1:])
+                    intersection = self.firsts()[prod[i]] & self.first_body(prod[i+1:])
                     intersection.discard("&")
-                    if "&" in self.first[prod[i]] and len(intersection) != 0:
+                    if "&" in self.firsts()[prod[i]] and len(intersection) != 0:
                         to_disc = prod
                         print("prod==={}".format(prod))
                         for prod_sub in self.rules[prod[i]]:
