@@ -4,6 +4,7 @@ import filecmp
 import unittest
 
 from context_free.grammar import CFGS_DIR, ContextFreeGrammar, OrderedSet
+from context_free.parser import PredictiveParser
 
 class TestContextFreeGrammar(unittest.TestCase):
 
@@ -365,11 +366,11 @@ class TestContextFreeGrammar(unittest.TestCase):
         cfg = ContextFreeGrammar("test_ll1_1.cfg")
         firsts = {t:OrderedSet([t]) for t in OrderedSet(['&']) | cfg.terminals}
         firsts.update({
-            'P': OrderedSet(['c', '&', 'v', 'f', 'b']),
+            'P': OrderedSet(['c', '&', 'v', 'f', 'b', 'k']),
             'K': OrderedSet(['c', '&']),
             'V': OrderedSet(['v', 'f', '&']),
             'F': OrderedSet(['f', '&']),
-            'C': OrderedSet(['b', 'c', '&']),
+            'C': OrderedSet(['b', 'k', '&']),
         })
         self.assertEqual(firsts, cfg.firsts())
 
@@ -397,11 +398,12 @@ class TestContextFreeGrammar(unittest.TestCase):
         cfg = ContextFreeGrammar("test_ll1_1.cfg")
         follows = {
             'P': OrderedSet(['$', ';']),
-            'K': OrderedSet(['v', 'f', 'b', 'c', '$', ';']),
-            'V': OrderedSet(['b', 'c', '$', 'e', ';']),
-            'F': OrderedSet(['b', 'c', '$', 'e', ';']),
+            'K': OrderedSet(['v', 'f', 'b', 'k', '$', ';']),
+            'V': OrderedSet(['b', 'k', '$', 'e', ';']),
+            'F': OrderedSet(['b', 'k', '$', 'e', ';']),
             'C': OrderedSet(['$', 'e', ';']),
         }
+        print(cfg.firsts())
         self.assertEqual(follows, cfg.follows())
 
         cfg = ContextFreeGrammar("test_ll1_2.cfg")
@@ -421,11 +423,25 @@ class TestContextFreeGrammar(unittest.TestCase):
         }
         self.assertEqual(follows, cfg.follows())
 
-    # def test_make_table(self):
-    #     cfg = ContextFreeGrammar("test_mt_1.cfg")
-    #     cfg.firsts()
-    #     cfg.follows()
-    #     cfg.make_table()
+    def test_make_LL1_table(self):
+        cfg = ContextFreeGrammar("test_ll1_1.cfg")
+        prods = ['STARTS AT 1', 'KVC', 'cK', '&', 'vV', 'F', 'fP;F', '&', 'bVCe', 'k;C', '&']
+
+        table = {
+            ('P', 'b'): prods[1], ('P', 'k'): prods[1], ('P', 'c'): prods[1], ('P', 'f'): prods[1], ('P', 'v'): prods[1], ('P', '$'): prods[1], ('P', ';'): prods[1],
+            ('K', 'b'): prods[3], ('K', 'k'): prods[3], ('K', 'c'): prods[2], ('K', 'f'): prods[3], ('K', 'v'): prods[3], ('K', '$'): prods[3], ('K', ';'): prods[3],
+            ('V', 'b'): prods[5], ('V', 'k'): prods[5], ('V', 'e'): prods[5], ('V', 'f'): prods[5], ('V', 'v'): prods[4], ('V', '$'): prods[5], ('V', ';'): prods[5],
+            ('F', 'b'): prods[7], ('F', 'k'): prods[7], ('F', 'e'): prods[7], ('F', 'f'): prods[6], ('F', '$'): prods[7], ('F', ';'): prods[7],
+            ('C', 'b'): prods[8], ('C', 'k'): prods[9], ('C', 'e'): prods[10], ('C', '$'): prods[10], ('C', ';'): prods[10],
+        }
+        self.assertEqual(table, cfg.make_LL1_table())
+
+    def test_make_LL1_parser(self):
+        cfg = ContextFreeGrammar("test_ll1_1.cfg")
+        parser = cfg.make_LL1_parser()
+        print(parser)
+
+        self.assertTrue(parser.parse("cvfbe;"))
 
     # def test_word(self):
     #     cfg = ContextFreeGrammar("test_mt_1.cfg")

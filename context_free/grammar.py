@@ -104,9 +104,9 @@ class ContextFreeGrammar:
         self.start = None
 
         # TODO: REMOVE
-        self.prod_to_id = dict()
-        self.id_to_prod = dict()
-        self.table = dict()
+        # self.prod_to_id = dict()
+        # self.id_to_prod = dict()
+        # self.table = dict()
 
         with open(filepath, 'r') as f:
             # ContextFreeGrammar.validate_cfg_word(f.read())
@@ -633,85 +633,41 @@ class ContextFreeGrammar:
                             break
         return follow
 
-    def make_table(self) -> PredictiveParser: # CONST
-        """
+    def make_LL1_table(self) -> dict(): # CONST
+        """Compute LL(1) parsing table.
+
         Pre-conditions
         --------------
-            1. self does not have left recursion.
+            1. The grammar does not have left recursion.
 
         Exceptions
         --------------
-            1. self is not left-factored.
+            1. The grammar has Fi/Fi or Fi/Fo conflict.
         """
-        cached_first = self.first()
-        id = 0
-        for head, bodies in self.rules.items():
-            for body in bodies:
-                id+=1
-                self.prod_to_id[(head, body)] = id
-                self.id_to_prod[id] = (head, body)
-
-        for v in self.variables:
-            for t in self.terminals:
-                self.table[(v, t)] = -1
-        for v in self.variables:
-            self.table[(v, "$")] = -1
+        firsts = self.firsts()
+        follows = self.follows()
+        table = dict()
 
         for v in self.variables:
             for alpha in self.rules[v]:
-                first = self.first_body(alpha, cached_first)
-                for f in first:
-                    if f != "&":
-                        if self.table[(v, f)] != -1:
-                            print("\n\n\nNOT LEFT-FACTORED\nYou need to use the method remove_left_recursion\n\n\n")
-                        self.table[(v, f)] = self.prod_to_id[(v, alpha)]
-                if "&" in first:
-                    for f in self.follow[v]:
-                        if self.table[(v, f)] != -1:
-                            print("\n\n\nNOT LEFT-FACTORED\nYou need to use the method remove_left_recursion\n\n\n")
-                        self.table[(v, f)] = self.prod_to_id[(v, alpha)]
-
-    def word(self, w): #ok
-        """
-        Pre-conditions
-        --------------
-            1. make_table has already been called and printed no error messages.
-        """
-        w+="$"
-        lw = len(w)
-        head = 0
-        stack = ["$", self.start]
-        while(True):
-            print("{} {}".format(w[head], stack))
-            if stack[-1] in self.terminals or stack[-1] == "$":
-                if stack[-1] == w[head]:
-                    if w[head] == "$":
-                        return True
+                first_alpha = self.first_body(alpha, firsts)
+                # If alpha = &, then skip the loop
+                for f in first_alpha - {'&'}:
+                    if (v, f) in table.keys():
+                        raise RuntimeError("First/First conflict.")
                     else:
-                        stack.pop()
-                        head+=1
-                else:
-                    return False
-            else:
-                id_table = self.table[(stack[-1], w[head])]
-                if id_table != -1:
-                    stack.pop()
-                    var, prod = self.id_to_prod[id_table]
-                    lp = len(prod)
-                    if prod == ("&",):
-                        continue
-                    for i in range(lp-1, -1, -1):
-                        stack.append(prod[i])
-                else:
-                    return False
+                        table[(v, f)] = ''.join(alpha)
+                if "&" in first_alpha:
+                    for f in follows[v]:
+                        if (v, f) in table.keys():
+                            raise RuntimeError("First/Follow conflict.")
+                        else:
+                            table[(v, f)] = ''.join(alpha)
+        return table
 
-    def prod_id(self):
-        id = 0
-        for head, bodies in self.rules.items():
-            for body in bodies:
-                id+=1
-                self.prod_to_id[(head, body)] = id
-                self.id_to_prod[id] = (head, body)
+    def make_LL1_parser(self) -> PredictiveParser: # CONST
+        """Build LL(1) Predictive Parser for this grammar."""
+        return PredictiveParser(self.make_LL1_table())
 
     def left_factoring(self):
         """
