@@ -676,7 +676,7 @@ class ContextFreeGrammar:
 
         Exceptions
         --------------
-            1. self has left recursion.
+            1. The grammar has left recursion.
         """
 
         if self.has_left_recursion():
@@ -713,7 +713,7 @@ class ContextFreeGrammar:
         def create_new_var_lcp(lcp):
             nonlocal new_var_id
             new_rules_old_v = OrderedSet()
-            new_var_id = new_var_id+ 1
+            new_var_id = new_var_id + 1
             if len(v) == 1:
                 new_var = "❬{},{}❭".format(v, new_var_id)
             else:
@@ -721,8 +721,14 @@ class ContextFreeGrammar:
             self.rules[new_var] = OrderedSet()
             self.variables.add(new_var)
 
+            # Factor
             ll = len(lcp)
-            new_rules_old_v.add(lcp+(new_var,))
+            if lcp == ("&",):
+                new_rules_old_v.add((new_var,))
+            else:
+                new_rules_old_v.add(lcp+(new_var,))
+
+            # Add prods to factored variable
             for prod in self.rules[v]:
                 if prod[0] == conflict_terminal:
                     if len(prod[ll:]) != 0:
@@ -769,7 +775,7 @@ class ContextFreeGrammar:
             total = OrderedSet()
             for prod in self.rules[v]:
                 for ter in self.first_body(prod, cached_first):
-                    if ter != "&" and ter in total and conflict_terminal is None:
+                    if ter in total and conflict_terminal is None:
                         conflict_terminal = ter
                         break
                     total.add(ter)

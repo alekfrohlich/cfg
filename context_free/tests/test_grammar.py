@@ -92,14 +92,6 @@ class TestContextFreeGrammar(unittest.TestCase):
         ref_path = os.path.join(CFGS_DIR, "test_rlr_exs_3aA.cfg")
         self.assertTrue(filecmp.cmp(test_path, ref_path))
 
-        # FIXME: Remove e-prods first!
-        # cfg = ContextFreeGrammar("test_rlr_exs_3b.cfg")
-        # cfg.remove_left_recursion()
-        # cfg.save_to_file("test_rlr_exs_3bT.cfg")
-        # test_path = os.path.join(CFGS_DIR, "test_rlr_exs_3bT.cfg")
-        # ref_path = os.path.join(CFGS_DIR, "test_rlr_exs_3bA.cfg")
-        # self.assertTrue(filecmp.cmp(test_path, ref_path))
-
     def test_ru(self):
         cfg = ContextFreeGrammar("test_ru_1.cfg")
         cfg.remove_unit()
@@ -166,7 +158,6 @@ class TestContextFreeGrammar(unittest.TestCase):
         ref_path = os.path.join(CFGS_DIR, "test_rup_1A.cfg")
         self.assertTrue(filecmp.cmp(test_path, ref_path))
 
-        # FIXME: empty language
         cfg = ContextFreeGrammar("test_rup_2.cfg")
         cfg.remove_unproductives()
         cfg.save_to_file("test_rup_2T.cfg")
@@ -223,9 +214,6 @@ class TestContextFreeGrammar(unittest.TestCase):
         cfg = ContextFreeGrammar("test_rlr_exs_3a.cfg")
         self.assertTrue(cfg.has_left_recursion())
 
-        cfg = ContextFreeGrammar("test_rlr_exs_3b.cfg")
-        self.assertTrue(cfg.has_left_recursion())
-
         cfg = ContextFreeGrammar("test_rlr_1A.cfg")
         self.assertFalse(cfg.has_left_recursion())
 
@@ -233,9 +221,6 @@ class TestContextFreeGrammar(unittest.TestCase):
         self.assertFalse(cfg.has_left_recursion())
 
         cfg = ContextFreeGrammar("test_rlr_exs_3aA.cfg")
-        self.assertFalse(cfg.has_left_recursion())
-
-        cfg = ContextFreeGrammar("test_rlr_exs_3bA.cfg")
         self.assertFalse(cfg.has_left_recursion())
 
         cfg = ContextFreeGrammar("test_ll1_1.cfg")
@@ -269,14 +254,7 @@ class TestContextFreeGrammar(unittest.TestCase):
         cfg = ContextFreeGrammar("test_rlr_exs_3aA.cfg")
         self.assertTrue(cfg.has_e())
 
-        cfg = ContextFreeGrammar("test_rlr_exs_3bA.cfg")
-        self.assertTrue(cfg.has_e())
-
         cfg = ContextFreeGrammar("test_rlr_exs_3aA.cfg")
-        cfg.remove_epsilon()
-        self.assertFalse(cfg.has_e())
-
-        cfg = ContextFreeGrammar("test_rlr_exs_3bA.cfg")
         cfg.remove_epsilon()
         self.assertFalse(cfg.has_e())
 
@@ -361,6 +339,12 @@ class TestContextFreeGrammar(unittest.TestCase):
         ref_path = os.path.join(CFGS_DIR, "test_lf_follow_1A.cfg")
         self.assertTrue(filecmp.cmp(test_path, ref_path))
 
+        cfg = ContextFreeGrammar("test_lf_1e.cfg")
+        cfg.left_factoring()
+        cfg.save_to_file("test_lf_1eT.cfg")
+        test_path = os.path.join(CFGS_DIR, "test_lf_1eT.cfg")
+        ref_path = os.path.join(CFGS_DIR, "test_lf_1eA.cfg")
+        self.assertTrue(filecmp.cmp(test_path, ref_path))
 
     def test_firsts(self):
         cfg = ContextFreeGrammar("test_ll1_1.cfg")
@@ -441,4 +425,3 @@ class TestContextFreeGrammar(unittest.TestCase):
 
         self.assertTrue(parser.parse("cvfbe;"))
         self.assertFalse(parser.parse("&"))
-
