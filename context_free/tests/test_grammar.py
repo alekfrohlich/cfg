@@ -403,7 +403,6 @@ class TestContextFreeGrammar(unittest.TestCase):
             'F': OrderedSet(['b', 'k', '$', 'e', ';']),
             'C': OrderedSet(['$', 'e', ';']),
         }
-        print(cfg.firsts())
         self.assertEqual(follows, cfg.follows())
 
         cfg = ContextFreeGrammar("test_ll1_2.cfg")
@@ -425,7 +424,7 @@ class TestContextFreeGrammar(unittest.TestCase):
 
     def test_make_LL1_table(self):
         cfg = ContextFreeGrammar("test_ll1_1.cfg")
-        prods = ['STARTS AT 1', 'KVC', 'cK', '&', 'vV', 'F', 'fP;F', '&', 'bVCe', 'k;C', '&']
+        prods = ['STARTS AT 1', ('K', 'V', 'C'), ('c', 'K'), ('&',), ('v', 'V'), ('F',), ('f', 'P', ';', 'F'), ('&',), ('b', 'V', 'C', 'e'), ('k', ';', 'C'), ('&',)]
 
         table = {
             ('P', 'b'): prods[1], ('P', 'k'): prods[1], ('P', 'c'): prods[1], ('P', 'f'): prods[1], ('P', 'v'): prods[1], ('P', '$'): prods[1], ('P', ';'): prods[1],
@@ -436,9 +435,10 @@ class TestContextFreeGrammar(unittest.TestCase):
         }
         self.assertEqual(table, cfg.make_LL1_table())
 
-    def test_make_LL1_parser(self): # FIXME: Cant join the tokens
+    def test_make_LL1_parser(self):
         cfg = ContextFreeGrammar("test_ll1_1.cfg")
         parser = cfg.make_LL1_parser()
-        print(parser)
 
         self.assertTrue(parser.parse("cvfbe;"))
+        self.assertFalse(parser.parse("&"))
+

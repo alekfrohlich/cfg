@@ -57,9 +57,9 @@ class PredictiveParser:
         i = 0
         while i < len(string):
             s = string[i]
-            print("S={}, STACK={}".format(s, stack))
+            # print("S={}, STACK={}".format(s, stack))
             if stack[-1] == s:
-                print("SHIFTING INPUT")
+                # print("SHIFTING INPUT")
                 if s == "$":
                     assert len(stack) == 1
                     return True
@@ -69,7 +69,7 @@ class PredictiveParser:
                     continue
             else: # expand variable
                 state = (stack[-1], s)
-                print("EXPANDING STACK")
+                # print("EXPANDING STACK")
                 if state not in self.table.keys(): # No action from this state
                     return False
                 else:

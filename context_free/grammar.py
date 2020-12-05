@@ -200,7 +200,8 @@ class ContextFreeGrammar:
     @staticmethod
     def validate_cfg_word(word: str) -> bool:
         if VERIFY_GRAMMAR:
-            print("SPECS ALREADY ON")
+            # print("SPECS ALREADY ON")
+            pass
 
     def has_e(self): # CONST
         """Tests if the grammar has &-rules that are not in the start symbol."""
@@ -213,7 +214,7 @@ class ContextFreeGrammar:
     def has_cycle(self): # CONST
         # (A, B) is an edge iff A => B is a rule
         edges = {var: OrderedSet() for var in self.variables}
-        for head in self.rules.keys(): # FIXME: Tem var sem entrada em rules?
+        for head in self.variables:
             for body in self.rules[head]:
                 if len(body) == 1 and body[0] in self.variables:
                     edges[head].add(body[0])
@@ -251,7 +252,7 @@ class ContextFreeGrammar:
             raise RuntimeError("A grammar must be cycle-free in order to remove left recursions.")
 
         # Remove indirect
-        for i in range(len(self.variables)): # FIXME: now over var insead of rules.keys()?
+        for i in range(len(self.variables)):
             direct = False
             for j in range(i):
                 to_remove = set()
@@ -301,7 +302,7 @@ class ContextFreeGrammar:
 
         # (A, B) is an edge iff A => B is a rule
         edges = {var:OrderedSet() for var in self.variables}
-        for head in self.rules.keys(): # FIXME: same trouble as before
+        for head in self.variables:
             for body in self.rules[head]:
                 if len(body) == 1 and body[0] in self.variables:
                     edges[head].add(body[0])
@@ -429,7 +430,7 @@ class ContextFreeGrammar:
         # (A, B) is an edge iff A => alfa and B is in alfa
         # NOTE: doesn't take care of terminals
         edges = {var:OrderedSet() for var in self.variables}
-        for head in self.rules.keys(): # FIXME: Same
+        for head in self.variables:
             for body in self.rules[head]:
                 for symbol in body:
                     if symbol in self.variables:
@@ -637,13 +638,10 @@ class ContextFreeGrammar:
     def make_LL1_table(self) -> dict(): # CONST
         """Compute LL(1) parsing table.
 
-        Pre-conditions
-        --------------
-            1. The grammar does not have left recursion.
-
         Exceptions
-        --------------
-            1. The grammar has Fi/Fi or Fi/Fo conflict.
+        ----------
+            1. The grammar does not have left recursion.
+            2. The grammar has Fi/Fi or Fi/Fo conflict.
         """
         firsts = self.firsts()
         follows = self.follows()
@@ -670,8 +668,12 @@ class ContextFreeGrammar:
         """Build LL(1) Predictive Parser for this grammar."""
         return PredictiveParser(self.make_LL1_table())
 
-    def left_factoring(self): # NOT CONST
+    def left_factoring(self) -> bool: # NOT CONST
         """
+        Returns
+        -------
+            True: left factoring succeded
+
         Exceptions
         --------------
             1. self has left recursion.
@@ -680,58 +682,33 @@ class ContextFreeGrammar:
         if self.has_left_recursion():
             raise RuntimeError("A grammar can't have left recursion in ordered to be factored")
 
-        cached_first = self.firsts()
-        firsts_v = dict()
         new_var_id = 0
 
-        def sub_var(prod):
-            to_add = OrderedSet()
-            for prod_var in self.rules[prod[0]]:
-                if prod_var == ("&",):
-                    if len(prod[1:]) == 0:
-                        to_add.add(("&", ))
-                    else:
-                        to_add.add(prod[1:])
-                else:
-                    to_add.add(prod_var+prod[1:])
-            return to_add
-
-        def substitute_ndet_var(ndet_term):
-            anyV = True
-            while(anyV):
-                anyV = False
-                new_rules_v = OrderedSet()
+        def expose_indirect_ndet(conflict_terminal):
+            def sub_var(prod):
                 to_add = OrderedSet()
-                for prod in self.rules[v]:
-                    if prod[0] in self.variables and ndet_term in self.first_body(prod): # NOTE: CANT CACHE
-                        to_add.update(sub_var(prod))
-                        anyV = True
+                for prod_var in self.rules[prod[0]]:
+                    if prod_var == ("&",):
+                        if len(prod[1:]) == 0:
+                            to_add.add(("&", ))
+                        else:
+                            to_add.add(prod[1:])
                     else:
-                        to_add.add(prod)
-                self.rules[v] = to_add
+                        to_add.add(prod_var+prod[1:])
+                return to_add
 
-        def get_largest_common_prefix_2(str1, str2):
-            if len(str1) > len(str2):
-                str_t = str2
-                str2 = str1
-                str1 = str_t
-            l1 = len(str1)
-            for i in range(l1):
-                if str1[i] != str2[i]:
-                    return str1[:i]
-            return str1
-
-        def get_largest_common_prefix():
-            for prod in self.rules[v]:
-                if prod[0] == ndet_term:
-                    lcp = prod
-                    break
-
-            for prod in self.rules[v]:
-                if prod[0] == ndet_term:
-                    lcp = get_largest_common_prefix_2(lcp, prod)
-            # print("lcp::{}".format(lcp))
-            return lcp
+            cached_first = self.firsts()
+            substitution_happened = True
+            while substitution_happened:
+                substitution_happened = False
+                new_rules_v = OrderedSet()
+                for prod in self.rules[v]:
+                    if prod[0] in self.variables and conflict_terminal in self.first_body(prod, cached_first):
+                        new_rules_v.update(sub_var(prod))
+                        substitution_happened = True
+                    else:
+                        new_rules_v.add(prod)
+                self.rules[v] = new_rules_v
 
         def create_new_var_lcp(lcp):
             nonlocal new_var_id
@@ -747,7 +724,7 @@ class ContextFreeGrammar:
             ll = len(lcp)
             new_rules_old_v.add(lcp+(new_var,))
             for prod in self.rules[v]:
-                if prod[0] == ndet_term:
+                if prod[0] == conflict_terminal:
                     if len(prod[ll:]) != 0:
                         self.rules[new_var].add(prod[ll:])
                     else:
@@ -759,84 +736,80 @@ class ContextFreeGrammar:
 
         def first_follow():
             new_rules_old_v = OrderedSet()
-            to_disc = None
+            to_discard = None
+            cached_firsts = self.firsts()
             for prod in self.rules[v]:
                 lp = len(prod)
                 for i in range(lp-1):
-                    intersection = self.firsts()[prod[i]] & self.first_body(prod[i+1:])
-                    intersection.discard("&")
-                    if "&" in self.firsts()[prod[i]] and len(intersection) != 0:
-                        to_disc = prod
-                        print("prod==={}".format(prod))
-                        for prod_sub in self.rules[prod[i]]:
-                            if prod_sub == ("&", ):
-                                new_rules_old_v.add(prod[:i]+prod[i+1:])
-                            else:
-                                new_rules_old_v.add(prod[:i]+prod_sub+prod[i+1:])
-                        print(new_rules_old_v)
-                        print("\n\n\n===================================\n\n\n")
-                        break
-                if not to_disc is None:
+                    # Test if any variable Xi appearing in X1X2...Xn has a Fi/Fo conflict
+                    # That is, ε in FIRST(Xi) AND FIRST(Xi) ∩ FIRST(Xi+1...Xn) ≠ Ø
+                    if prod[i] in self.variables:
+                        intersection = cached_firsts[prod[i]] & self.first_body(prod[i+1:], cached_firsts)
+                        intersection.discard("&")
+                        if "&" in cached_firsts[prod[i]] and len(intersection) != 0:
+                            to_discard = prod
+                            for prod_sub in self.rules[prod[i]]:
+                                if prod_sub == ("&", ):
+                                    new_rules_old_v.add(prod[:i]+prod[i+1:])
+                                else:
+                                    new_rules_old_v.add(prod[:i]+prod_sub+prod[i+1:])
+                            break
+                if not to_discard is None:
                     break
-            self.rules[v].discard(to_disc)
+            self.rules[v].discard(to_discard)
             self.rules[v].update(new_rules_old_v)
-            # print()
-            if not to_disc is None:
+            if not to_discard is None:
                 return True
             return False
 
         def first_first():
-            nonlocal ndet_term
-            for prod in self.rules[v]: #choose ndet_term
-                # print(prod)
-                firsts_v[prod] = self.first_body(prod)
-                # print(firsts_v[prod])
-
-                for ter in firsts_v[prod]:
-                    if ter != "&":
-                        if ter in total and ndet_term is None:
-                            print("ndet_ter")
-                            print(ter)
-                            ndet_term = ter
+            nonlocal conflict_terminal
+            cached_first = self.firsts()
+            # Search for non determinism
+            total = OrderedSet()
+            for prod in self.rules[v]:
+                for ter in self.first_body(prod, cached_first):
+                    if ter != "&" and ter in total and conflict_terminal is None:
+                        conflict_terminal = ter
+                        break
                     total.add(ter)
 
-            if not ndet_term is None:
-                # print("SUb")
-                anynd = True
-                print("\n\nGRAMMAR Normal")
-                print(self)
-                # indirect
-                substitute_ndet_var(ndet_term)
-                print("\n\nGRAMMAR Ind")
-                print(self)
-                # direct
-                lcp = get_largest_common_prefix()
+            if conflict_terminal:
+                has_non_determinism = True
+                # print("\n\nGRAMMAR Before")
+                # print(self)
+
+                # Expose indirect
+                expose_indirect_ndet(conflict_terminal)
+                # print("\n\nGRAMMAR After Substitutions")
+                # print(self)
+
+                # Direct
+                lcp = os.path.commonprefix([prod for prod in self.rules[v] if prod[0] == conflict_terminal])
                 create_new_var_lcp(lcp)
-                print("\n\nGRAMMAR Dir")
-                print(self)
+                # print("\n\nGRAMMAR After Eliminating Direct")
+                # print(self)
                 return True
             return False
 
         for i in range(20):
-            anynd = False
+            has_non_determinism = False
 
             for v in self.variables:
-                firsts_v.clear()
-                ndet_term = None
-                total = OrderedSet()
+                conflict_terminal = None
 
+                # Fi/Fo conflict always introduces Fi/Fi conflict
                 fi_fo = first_follow()
-                if fi_fo:
-                    anynd = True
-                    break
 
+                # Start another iteration of non-determinism remains
                 fi_fi = first_first()
                 if fi_fi:
-                    anynd = True
+                    has_non_determinism = True
                     break
 
-            if not anynd:
-                print("Finished in {} step(s)".format(i))
+            if not has_non_determinism:
+                # print("Finished in {} step(s)".format(i))
+                self.CHECK_GRAMMAR()
                 return True
         self.CHECK_GRAMMAR()
         return False
@@ -844,5 +817,5 @@ class ContextFreeGrammar:
 VERIFY_GRAMMAR = False
 SPEC_GRAMMAR = ContextFreeGrammar("spec.cfg")
 SPEC_PARSER = SPEC_GRAMMAR.make_LL1_parser()
-print(SPEC_PARSER)
+# print(SPEC_PARSER)
 VERIFY_GRAMMAR = True
