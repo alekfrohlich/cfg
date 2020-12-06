@@ -34,30 +34,6 @@ class TestContextFreeGrammar(unittest.TestCase):
         # print(cfg)
         # print(cfg2)
 
-    def test_cfg_grammar_spec(self):
-        """
-        Labels
-        ------
-            b: |
-            e: epsilon
-            n: newline
-            s: ->
-            t: terminal
-            u: uppercase variable
-        """
-
-        cfg = ContextFreeGrammar("spec.cfg")
-
-        # # Test well tokenized
-        # self.assertEqual(cfg.rules["❬GrammarRecursion❭"] , OrderedSet([("❬Line❭", "n", "❬GrammarRecursion❭"), ("&",)]))
-        # self.assertEqual(cfg.rules["❬Line❭"]             , OrderedSet([("❬Var❭", "s", "❬LineFactored❭")]))
-        # self.assertEqual(cfg.rules["❬LineFactored❭"]     , OrderedSet([("e",), ("❬ProdRecursion❭",)]))
-        # self.assertEqual(cfg.rules["❬ProdRecursion❭"]    , OrderedSet([("❬SyntFormRecursion❭", "b", "❬ProdRecursion❭"), ("&",)]))
-        # self.assertEqual(cfg.rules["❬SyntFormRecursion❭"], OrderedSet([("t", "❬SyntFormRecursion❭"), ("❬Var❭", "❬SyntFormRecursion❭"), ("t",), ("❬Var❭",)]))
-        # self.assertEqual(cfg.rules["❬Var❭"]              , OrderedSet([("u",), ("<", "❬SyntFormRecursion❭", ">")]))
-
-        # print(cfg)
-
     def test_escape_chars(self):
         """
         Notes
@@ -70,6 +46,10 @@ class TestContextFreeGrammar(unittest.TestCase):
         self.assertNotEqual(cfg.rules["S"], OrderedSet([("\n",), ("\t",)]))
         # print(cfg)
 
+    def test_spec(self):
+        with self.assertRaises(RuntimeError):
+            ContextFreeGrammar("test_spec_1.cfg")
+
     def test_rlr(self):
         cfg = ContextFreeGrammar("test_rlr_1.cfg")
         cfg.remove_left_recursion()
@@ -77,6 +57,7 @@ class TestContextFreeGrammar(unittest.TestCase):
         test_path = os.path.join(CFGS_DIR, "test_rlr_1T.cfg")
         ref_path = os.path.join(CFGS_DIR, "test_rlr_1A.cfg")
         self.assertTrue(filecmp.cmp(test_path, ref_path))
+        ContextFreeGrammar("test_rlr_1A.cfg") # TEST .CFG CONFORMATION
 
         cfg = ContextFreeGrammar("test_rlr_2.cfg")
         cfg.remove_left_recursion()
@@ -84,6 +65,7 @@ class TestContextFreeGrammar(unittest.TestCase):
         test_path = os.path.join(CFGS_DIR, "test_rlr_2T.cfg")
         ref_path = os.path.join(CFGS_DIR, "test_rlr_2A.cfg")
         self.assertTrue(filecmp.cmp(test_path, ref_path))
+        ContextFreeGrammar("test_rlr_2A.cfg") # TEST .CFG CONFORMATION
 
         cfg = ContextFreeGrammar("test_rlr_exs_3a.cfg")
         cfg.remove_left_recursion()
@@ -91,6 +73,7 @@ class TestContextFreeGrammar(unittest.TestCase):
         test_path = os.path.join(CFGS_DIR, "test_rlr_exs_3aT.cfg")
         ref_path = os.path.join(CFGS_DIR, "test_rlr_exs_3aA.cfg")
         self.assertTrue(filecmp.cmp(test_path, ref_path))
+        ContextFreeGrammar("test_rlr_exs_3aA.cfg") # TEST .CFG CONFORMATION
 
     def test_ru(self):
         cfg = ContextFreeGrammar("test_ru_1.cfg")
@@ -99,6 +82,7 @@ class TestContextFreeGrammar(unittest.TestCase):
         test_path = os.path.join(CFGS_DIR, "test_ru_1T.cfg")
         ref_path = os.path.join(CFGS_DIR, "test_ru_1A.cfg")
         self.assertTrue(filecmp.cmp(test_path, ref_path))
+        ContextFreeGrammar("test_ru_1A.cfg") # TEST .CFG CONFORMATION
 
         cfg = ContextFreeGrammar("test_ru_2.cfg")
         cfg.remove_unit()
@@ -106,6 +90,7 @@ class TestContextFreeGrammar(unittest.TestCase):
         test_path = os.path.join(CFGS_DIR, "test_ru_2T.cfg")
         ref_path = os.path.join(CFGS_DIR, "test_ru_2A.cfg")
         self.assertTrue(filecmp.cmp(test_path, ref_path))
+        ContextFreeGrammar("test_ru_2A.cfg") # TEST .CFG CONFORMATION
 
         cfg = ContextFreeGrammar("test_ru_3.cfg")
         cfg.remove_unit()
@@ -113,6 +98,7 @@ class TestContextFreeGrammar(unittest.TestCase):
         test_path = os.path.join(CFGS_DIR, "test_ru_3T.cfg")
         ref_path = os.path.join(CFGS_DIR, "test_ru_3A.cfg")
         self.assertTrue(filecmp.cmp(test_path, ref_path))
+        ContextFreeGrammar("test_ru_3A.cfg") # TEST .CFG CONFORMATION
 
         cfg = ContextFreeGrammar("test_ru_4.cfg")
         cfg.remove_unit()
@@ -120,6 +106,7 @@ class TestContextFreeGrammar(unittest.TestCase):
         test_path = os.path.join(CFGS_DIR, "test_ru_4T.cfg")
         ref_path = os.path.join(CFGS_DIR, "test_ru_4A.cfg")
         self.assertTrue(filecmp.cmp(test_path, ref_path))
+        ContextFreeGrammar("test_ru_4A.cfg") # TEST .CFG CONFORMATION
 
         cfg = ContextFreeGrammar("test_ru_5.cfg")
         cfg.remove_unit()
@@ -127,6 +114,7 @@ class TestContextFreeGrammar(unittest.TestCase):
         test_path = os.path.join(CFGS_DIR, "test_ru_5T.cfg")
         ref_path = os.path.join(CFGS_DIR, "test_ru_5A.cfg")
         self.assertTrue(filecmp.cmp(test_path, ref_path))
+        ContextFreeGrammar("test_ru_5A.cfg") # TEST .CFG CONFORMATION
 
     def test_re(self):
         cfg = ContextFreeGrammar("test_re_1.cfg")
@@ -203,6 +191,8 @@ class TestContextFreeGrammar(unittest.TestCase):
         test_path = os.path.join(CFGS_DIR, "test_fnc_1T.cfg")
         ref_path = os.path.join(CFGS_DIR, "test_fnc_1A.cfg")
         self.assertTrue(filecmp.cmp(test_path, ref_path))
+        ContextFreeGrammar("test_fnc_1.cfg") # TEST .CFG CONFORMATION
+
 
     def test_hlr(self):
         cfg = ContextFreeGrammar("test_rlr_1.cfg")
@@ -297,6 +287,7 @@ class TestContextFreeGrammar(unittest.TestCase):
         test_path = os.path.join(CFGS_DIR, "test_lf_1T.cfg")
         ref_path = os.path.join(CFGS_DIR, "test_lf_1A.cfg")
         self.assertTrue(filecmp.cmp(test_path, ref_path))
+        ContextFreeGrammar("test_lf_1A.cfg") # TEST .CFG CONFORMATION
 
         cfg = ContextFreeGrammar("test_lf_2.cfg")
         cfg.left_factoring()
@@ -304,6 +295,7 @@ class TestContextFreeGrammar(unittest.TestCase):
         test_path = os.path.join(CFGS_DIR, "test_lf_2T.cfg")
         ref_path = os.path.join(CFGS_DIR, "test_lf_2A.cfg")
         self.assertTrue(filecmp.cmp(test_path, ref_path))
+        ContextFreeGrammar("test_lf_2A.cfg") # TEST .CFG CONFORMATION
 
         cfg = ContextFreeGrammar("test_lf_3.cfg")
         cfg.left_factoring()
@@ -311,6 +303,7 @@ class TestContextFreeGrammar(unittest.TestCase):
         test_path = os.path.join(CFGS_DIR, "test_lf_3T.cfg")
         ref_path = os.path.join(CFGS_DIR, "test_lf_3A.cfg")
         self.assertTrue(filecmp.cmp(test_path, ref_path))
+        ContextFreeGrammar("test_lf_3A.cfg") # TEST .CFG CONFORMATION
 
         cfg = ContextFreeGrammar("test_lf_4.cfg")
         self.assertFalse(cfg.left_factoring())
@@ -324,6 +317,7 @@ class TestContextFreeGrammar(unittest.TestCase):
         test_path = os.path.join(CFGS_DIR, "test_lf_6T.cfg")
         ref_path = os.path.join(CFGS_DIR, "test_lf_6A.cfg")
         self.assertTrue(filecmp.cmp(test_path, ref_path))
+        ContextFreeGrammar("test_lf_6A.cfg") # TEST .CFG CONFORMATION
 
         cfg = ContextFreeGrammar("test_lf_exs_4c.cfg")
         cfg.left_factoring()
@@ -331,6 +325,7 @@ class TestContextFreeGrammar(unittest.TestCase):
         test_path = os.path.join(CFGS_DIR, "test_lf_exs_4cT.cfg")
         ref_path = os.path.join(CFGS_DIR, "test_lf_exs_4cA.cfg")
         self.assertTrue(filecmp.cmp(test_path, ref_path))
+        ContextFreeGrammar("test_lf_exs_4cA.cfg") # TEST .CFG CONFORMATION
 
         cfg = ContextFreeGrammar("test_lf_follow_1.cfg")
         cfg.left_factoring()
@@ -338,6 +333,7 @@ class TestContextFreeGrammar(unittest.TestCase):
         test_path = os.path.join(CFGS_DIR, "test_lf_follow_1T.cfg")
         ref_path = os.path.join(CFGS_DIR, "test_lf_follow_1A.cfg")
         self.assertTrue(filecmp.cmp(test_path, ref_path))
+        ContextFreeGrammar("test_lf_follow_1A.cfg") # TEST .CFG CONFORMATION
 
         cfg = ContextFreeGrammar("test_lf_1e.cfg")
         cfg.left_factoring()
@@ -345,6 +341,7 @@ class TestContextFreeGrammar(unittest.TestCase):
         test_path = os.path.join(CFGS_DIR, "test_lf_1eT.cfg")
         ref_path = os.path.join(CFGS_DIR, "test_lf_1eA.cfg")
         self.assertTrue(filecmp.cmp(test_path, ref_path))
+        ContextFreeGrammar("test_lf_1eA.cfg") # TEST .CFG CONFORMATION
 
     def test_firsts(self):
         cfg = ContextFreeGrammar("test_ll1_1.cfg")
@@ -416,6 +413,18 @@ class TestContextFreeGrammar(unittest.TestCase):
             ('V', 'b'): prods[5], ('V', 'k'): prods[5], ('V', 'e'): prods[5], ('V', 'f'): prods[5], ('V', 'v'): prods[4], ('V', '$'): prods[5], ('V', ';'): prods[5],
             ('F', 'b'): prods[7], ('F', 'k'): prods[7], ('F', 'e'): prods[7], ('F', 'f'): prods[6], ('F', '$'): prods[7], ('F', ';'): prods[7],
             ('C', 'b'): prods[8], ('C', 'k'): prods[9], ('C', 'e'): prods[10], ('C', '$'): prods[10], ('C', ';'): prods[10],
+        }
+        self.assertEqual(table, cfg.make_LL1_table())
+
+        cfg = ContextFreeGrammar("test_ll1_4.cfg")
+        prods = ['STARTS AT 1', ('T', 'R'), ('o', 'T', 'R'), ('&',), ('F', 'U'), ('a', 'F', 'U'), ('&', ), ('n','F'), ('i',)]
+
+        table = {
+            ('E', 'i'): prods[1], ('E', 'n'): prods[1],
+            ('R', 'o'): prods[2], ('R', '$'): prods[3],
+            ('T', 'i'): prods[4], ('T', 'n'): prods[4],
+            ('U', 'o'): prods[6], ('U', 'a'): prods[5], ('U', '$'): prods[6],
+            ('F', 'i'): prods[8], ('F', 'n'): prods[7]
         }
         self.assertEqual(table, cfg.make_LL1_table())
 

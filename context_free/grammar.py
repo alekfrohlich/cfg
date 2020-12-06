@@ -77,7 +77,6 @@ class ContextFreeGrammar:
         --------------
             1. filename doesn't name a .cfg file inside cfgs/
             2. The file is an invalid grammar according to our context-free grammar specification (see spec.cfg)
-            3. Assumes the grammar has no vars without productions # FIXME: really?
 
         Post-conditions
         ---------------
@@ -140,13 +139,11 @@ class ContextFreeGrammar:
 
                             assert len(raw[i:j+1]) > 3
                             tokenized.append(raw[i:j+1])
-                            # self.variables.add(raw[i:j+1])
                             i = j + 1
                         else: # uppercase-cariable or terminal
                             tokenized.append(c)
                             if c.isupper():
                                 pass
-                                # self.variables.add(c)
                             else:
                                 if c != "&":
                                     self.terminals.add(c)
@@ -189,8 +186,6 @@ class ContextFreeGrammar:
     def CHECK_GRAMMAR(self): # CONST
         """Temporary method for forcing structure into python."""
         # Assert post-conditions: 2-6.
-        # NOTE: Nicolas, eu decidi testar tudo sempre pq tem algoritmo que cria producao
-        #       Alem disso, tb assumi que (1) já é bem testado pelos testes
         assert type(self.variables) == OrderedSet and len(self.variables) > 0 \
             and all([(v.isupper() and len(v) == 1) or (v[0] == '❬' and v[-1] == '❭' and len(v) > 2) for v in self.variables])
         assert type(self.terminals) == OrderedSet and all([(t != '&') and (len(t) == 1) and not (t.isupper()) for t in self.terminals])
@@ -199,9 +194,40 @@ class ContextFreeGrammar:
 
     @staticmethod
     def validate_cfg_word(word: str) -> bool:
+        """Check if `word` is a valid .cfg file; the .cfg file format is specified at spec.cfg
+        Labels
+        ------
+            b: |
+            e: epsilon
+            n: newline
+            s: ->
+            t: lowercase
+            u: uppercase
+            o: ❬
+            c: ❭
+        """
         if VERIFY_GRAMMAR:
-            # print("SPECS ALREADY ON")
-            pass
+            subst = [('\n', 'n'), ('|', 'b'), ('&', 'e'), ('->', 's'), ('❬', 'o'), ('❭', 'c')]
+            word2 = ''
+            i = 0
+            while i < len(word):
+                c = word[i]
+                if c.isupper():
+                    word2 += 'u'
+                elif c == '-' and word[i+1] == '>':
+                    word2 += '->'
+                    i += 1
+                elif c in {'\n', '|', '&', '❬', '❭'}:
+                    word2 += c
+                elif c == ' ':
+                    pass
+                else:
+                    word2 += 't'
+                i += 1
+            for k, v in subst:
+                word2 = word2.replace(k, v)
+            if not SPEC_PARSER.parse(word2):
+                raise RuntimeError("This Grammar is not a valid .cfg file")
 
     def has_e(self): # CONST
         """Tests if the grammar has &-rules that are not in the start symbol."""
@@ -446,7 +472,7 @@ class ContextFreeGrammar:
             self.variables.discard(rem)
         self.CHECK_GRAMMAR()
 
-    def replace_terminals(self): # NOT CONST, nao li ainda
+    def replace_terminals(self): # NOT CONST
         """
         Pre_conditions: None
         """
@@ -500,7 +526,7 @@ class ContextFreeGrammar:
             self.variables.add(v)
         self.CHECK_GRAMMAR()
 
-    def reduce_size(self): # NOT CONST, nao li ainda
+    def reduce_size(self): # NOT CONST
         # reduce_size does not check if new_v was already in the grammar
 
         new_rules = dict()
